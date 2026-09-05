@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pearl & Bloom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Great+Vibes&family=Playfair+Display:ital,wght@1,600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="top-ribbon">♡ <span>Handmade with love</span></div>
+<header class="site-header">
+  <div class="navbar">
+    <nav class="nav-links">
+      <a href="#home">Home</a><a href="#shop">Shop</a><a href="#orders">Orders</a>
+    </nav>
+    <div class="nav-right">
+      <div class="search"><input id="searchInput" type="search" placeholder="Search..."><span>⌕</span></div>
+      <button id="cartOpen" class="cart-button" aria-label="Cart">🛒<span id="cartCount" class="cart-badge">0</span></button>
+    </div>
+  </div>
+</header>
+
+<main>
+<section class="hero" id="home">
+  <div class="hero-flowers emoji-flowers left">🌸 🌸 🌸</div>
+    <div class="hero-flowers emoji-flowers right">🌸 🌸 🌸</div>
+    <span class="petal p1">✿</span><span class="petal p2">❀</span><span class="petal p3">✿</span><span class="petal p4">❀</span>
+  <h1 class="hero-title">Pearl &amp; Bloom</h1>
+  <div class="sparkle">✦</div>
+  <p class="bio">Hi, my name is Caroline Valenta. I'm 10 years old. I love crafts and sports. My favorite color is pastel pink, and my favorite food is breaded chicken with lemon.</p>
+  <div class="heart">♥</div>
+</section>
+
+<div class="benefits">
+  <div class="benefit"><span>♡</span><span>Handmade<br>with love</span></div>
+  <div class="benefit"><span>🌸</span><span>Colorful<br>&amp; unique</span></div>
+  <div class="benefit"><span>☆</span><span>Made to<br>brighten your day</span></div>
+  <div class="benefit"><span>🎁</span><span>Perfect for<br>gifting</span></div>
+</div>
+
+<section class="section" id="shop">
+  <h2 class="section-title">✨ Shop Our Favorites ✨</h2>
+  <div class="filters">
+    <button class="filter active" data-filter="all">All</button>
+    <button class="filter" data-filter="bracelets">Bracelets</button>
+    <button class="filter" data-filter="necklaces">Necklaces</button>
+    <button class="filter" data-filter="clay">Clay</button>
+    <button class="filter" data-filter="earrings">Earrings</button>
+    <button class="filter" data-filter="keychains">Keychains</button>
+    <button class="filter" data-filter="paintings">Paintings</button>
+  </div>
+  <div class="product-grid"><article class="product-card" data-category="bracelets" data-name="neon pink & green peace bracelet"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/peace-petals-bracelet.jpg" alt="Peace & Petals Bracelet"></div><div class="product-body"><h3>Peace & Petals Bracelet</h3><p class="product-price">$3.00</p><button class="add-btn" data-product="Peace & Petals Bracelet" data-price="3.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="bracelets" data-name="pink smiley bracelet"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/pink-happy-day-bracelet.jpg" alt="Pink Happy Day Bracelet"></div><div class="product-body"><h3>Pink Happy Day Bracelet</h3><p class="product-price">$3.00</p><button class="add-btn" data-product="Pink Happy Day Bracelet" data-price="3.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="bracelets" data-name="blue disc bracelet"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/blueberry-splash-bracelet.jpg" alt="Blueberry Splash Bracelet"></div><div class="product-body"><h3>Blueberry Splash Bracelet</h3><p class="product-price">$3.00</p><button class="add-btn" data-product="Blueberry Splash Bracelet" data-price="3.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="bracelets" data-name="blue & green bead bracelet"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/ocean-garden-bracelet.jpg" alt="Ocean Garden Bracelet"></div><div class="product-body"><h3>Ocean Garden Bracelet</h3><p class="product-price">$3.00</p><button class="add-btn" data-product="Ocean Garden Bracelet" data-price="3.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="bracelets" data-name="bff purple disc bracelets"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/purple-besties-bff-set.jpg" alt="Purple Besties BFF Set"></div><div class="product-body"><h3>Purple Besties BFF Set</h3><p class="product-price">$3.00</p><button class="add-btn" data-product="Purple Besties BFF Set" data-price="3.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="bracelets" data-name="bff pink bead bracelets"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/pink-promise-bff-set.jpg" alt="Pink Promise BFF Set"></div><div class="product-body"><h3>Pink Promise BFF Set</h3><p class="product-price">$3.00</p><button class="add-btn" data-product="Pink Promise BFF Set" data-price="3.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="bracelets" data-name="pink blue smiley bracelet"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/bubblegum-skies-bracelet.jpg" alt="Bubblegum Skies Bracelet"></div><div class="product-body"><h3>Bubblegum Skies Bracelet</h3><p class="product-price">$3.00</p><button class="add-btn" data-product="Bubblegum Skies Bracelet" data-price="3.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="bracelets" data-name="pastel heart bracelet"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/pastel-sweetheart-bracelet.jpg" alt="Pastel Sweetheart Bracelet"></div><div class="product-body"><h3>Pastel Sweetheart Bracelet</h3><p class="product-price">$3.00</p><button class="add-btn" data-product="Pastel Sweetheart Bracelet" data-price="3.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="bracelets" data-name="yellow pink smiley bracelet"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/yellow-pink-happy-day-bracelet.jpg" alt="Yellow Pink Happy Day Bracelet"></div><div class="product-body"><h3>Yellow Pink Happy Day Bracelet</h3><p class="product-price">$3.00</p><button class="add-btn" data-product="Yellow Pink Happy Day Bracelet" data-price="3.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="bracelets" data-name="blue smiley bracelet"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/blue-skies-smiley-bracelet.jpg" alt="Blue Skies Smiley Bracelet"></div><div class="product-body"><h3>Blue Skies Smiley Bracelet</h3><p class="product-price">$3.00</p><button class="add-btn" data-product="Blue Skies Smiley Bracelet" data-price="3.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="necklaces" data-name="purple pink necklace"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/sugar-plum-necklace.jpg" alt="Sugar Plum Necklace"></div><div class="product-body"><h3>Sugar Plum Necklace</h3><p class="product-price">$6.00</p><button class="add-btn" data-product="Sugar Plum Necklace" data-price="6.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="necklaces" data-name="turquoise tide necklace blue teal beaded necklace"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/turquoise-tide-necklace.jpg" alt="Turquoise Tide Necklace"></div><div class="product-body"><h3>Turquoise Tide Necklace</h3><p class="product-price">$6.00</p><button class="add-btn" data-product="Turquoise Tide Necklace" data-price="6.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="necklaces" data-name="pastel lagoon necklace"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/pastel-lagoon-necklace.jpg" alt="Pastel Lagoon Necklace"></div><div class="product-body"><h3>Pastel Lagoon Necklace</h3><p class="product-price">$6.00</p><button class="add-btn" data-product="Pastel Lagoon Necklace" data-price="6.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="keychains" data-name="blue green keychain"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/mermaid-lagoon-keychain.jpg" alt="Mermaid Lagoon Keychain"></div><div class="product-body"><h3>Mermaid Lagoon Keychain</h3><p class="product-price">$3.50</p><button class="add-btn" data-product="Mermaid Lagoon Keychain" data-price="3.50">🛒 Add to Cart</button></div></article><article class="product-card" data-category="bracelets" data-name="pastel smiley bracelet"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/happy-pastels-bracelet.jpg" alt="Happy Pastels Bracelet"></div><div class="product-body"><h3>Happy Pastels Bracelet</h3><p class="product-price">$3.00</p><button class="add-btn" data-product="Happy Pastels Bracelet" data-price="3.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="necklaces" data-name="berry crystal necklace"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/berry-crystal-necklace.jpg" alt="Berry Crystal Necklace"></div><div class="product-body"><h3>Berry Crystal Necklace</h3><p class="product-price">$6.00</p><button class="add-btn" data-product="Berry Crystal Necklace" data-price="6.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="necklaces" data-name="rainbow sorbet necklace"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/rainbow-sorbet-necklace.jpg" alt="Rainbow Sorbet Necklace"></div><div class="product-body"><h3>Rainbow Sorbet Necklace</h3><p class="product-price">$6.00</p><button class="add-btn" data-product="Rainbow Sorbet Necklace" data-price="6.00">🛒 Add to Cart</button></div></article><article class="product-card" data-category="keychains" data-name="rainbow pop keychain"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/rainbow-pop-keychain.jpg" alt="Rainbow Pop Keychain"></div><div class="product-body"><h3>Rainbow Pop Keychain</h3><p class="product-price">$3.50</p><button class="add-btn" data-product="Rainbow Pop Keychain" data-price="3.50">🛒 Add to Cart</button></div></article><article class="product-card" data-category="keychains" data-name="midnight blue keychain"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/midnight-blue-keychain.jpg" alt="Midnight Blue Keychain"></div><div class="product-body"><h3>Midnight Blue Keychain</h3><p class="product-price">$3.50</p><button class="add-btn" data-product="Midnight Blue Keychain" data-price="3.50">🛒 Add to Cart</button></div></article><article class="product-card" data-category="bracelets" data-name="rainbow candy bracelet"><div class="product-photo real-photo"><button class="fav-btn" aria-label="Favorite">♡</button><img src="img/rainbow-candy-bracelet.jpg" alt="Rainbow Candy Bracelet"></div><div class="product-body"><h3>Rainbow Candy Bracelet</h3><p class="product-price">$3.00</p><button class="add-btn" data-product="Rainbow Candy Bracelet" data-price="3.00">🛒 Add to Cart</button></div></article></div></section>
+
+<section class="orders" id="orders">
+ <h2>Track an order</h2>
+ <p>Enter the order number and email address used for your order.</p>
+ <div class="order-box"><input placeholder="Order number"><input type="email" placeholder="Email address"><button class="primary">Find order</button></div>
+</section>
+
+<section class="reviews">
+ <h2>Customer Love ♡</h2>
+ <div class="review-grid">
+   <blockquote>“So cute and the colors are perfect!”<br><br>★★★★★</blockquote>
+   <blockquote>“I love that I could customize mine.”<br><br>★★★★★</blockquote>
+   <blockquote>“The perfect little gift.”<br><br>★★★★★</blockquote>
+ </div>
+</section>
+</main>
+
+<aside class="cart-drawer" id="cartDrawer">
+ <div class="cart-head"><h2>Your Cart</h2><button id="cartClose">×</button></div>
+ <div id="cartItems" class="cart-items"><p>Your cart is empty.</p></div>
+ <div class="cart-total"><span>Total</span><span id="cartTotal">$0.00</span></div>
+ <button class="add-btn" id="checkoutBtn">Checkout</button>
+</aside>
+<div id="overlay" class="overlay"></div>
+<footer>Thank you for supporting my small business! 💕</footer>
+
+<div class="checkout-overlay" id="checkoutOverlay" aria-hidden="true">
+  <div class="checkout-card" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
+    <h2 id="checkoutTitle">Shipping details ♡</h2>
+    <p>Enter where you want your Pearl &amp; Bloom order mailed.</p>
+    <form id="orderCheckoutForm" action="https://formsubmit.co/caroline_v_15@icloud.com" method="POST">
+      <input type="hidden" name="_subject" id="fsSubject" value="New Pearl &amp; Bloom Order">
+      <input type="hidden" name="_template" value="table">
+      <input type="hidden" name="_captcha" value="false">
+      <input type="hidden" name="_url" id="fsUrl" value="">
+      <input type="hidden" name="_replyto" id="fsReplyTo" value="">
+      <input type="hidden" name="Order number" id="fsOrderNumber" value="">
+      <input type="hidden" name="Items" id="fsItems" value="">
+      <input type="hidden" name="Order total" id="fsTotal" value="">
+      <div class="checkout-grid">
+        <label class="full">Full name<input id="orderName" name="Customer name" autocomplete="name" required></label>
+        <label class="full">Email<input id="orderEmail" name="Customer email" type="email" autocomplete="email" required></label>
+        <label class="full">Street address or P.O. Box<input id="orderAddress" name="Street address or PO Box" autocomplete="street-address" required></label>
+        <label>City<input id="orderCity" name="City" autocomplete="address-level2" required></label>
+        <label>State / territory<input id="orderState" name="State or territory" autocomplete="address-level1" required></label>
+        <label>ZIP / postal code<input id="orderZip" name="ZIP or postal code" autocomplete="postal-code" required></label>
+        <label>Phone (optional)<input id="orderPhone" name="Phone" type="tel" autocomplete="tel"></label>
+        <label class="full">Order notes (optional)<textarea id="orderNotes" name="Order notes" rows="3" placeholder="Anything we should know?"></textarea></label>
+      </div>
+      <div class="checkout-summary" id="checkoutSummary"></div>
+      <div class="checkout-actions">
+        <button type="button" class="secondary-checkout" id="cancelCheckout">Back</button>
+        <button type="submit" class="add-btn" id="placeOrderBtn">Place order</button>
+      </div>
+      <div class="checkout-error" id="checkoutError">We couldn't send the order. Please try again.</div>
+    </form>
+  </div>
+</div>
+
+<div class="order-confirm-overlay" id="orderConfirmOverlay">
+  <div class="order-confirm-card">
+    <div class="order-flower">🌸</div>
+    <h2>Thank you for your order!</h2>
+    <p>Your Pearl &amp; Bloom order number is:</p>
+    <div class="order-number" id="newOrderNumber">PB-000000</div>
+    <p class="save-order">Save this number so you can look up your order later.</p>
+    <button class="primary" id="closeOrderConfirm">Done</button>
+  </div>
+</div>
+
+  <script src="app.js"></script>
+</body></html>
