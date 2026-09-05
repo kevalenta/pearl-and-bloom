@@ -140,7 +140,7 @@ document.querySelectorAll('.charm-btn').forEach(btn=>{
  const confirmBox=document.getElementById('orderConfirmOverlay');
  const numberBox=document.getElementById('newOrderNumber');
  const done=document.getElementById('closeOrderConfirm');
- const orderEmailEndpoint='https://formsubmit.co/ajax/caroline_v_15@icloud.com';
+ const orderEmailEndpoint='https://formsubmit.co/ajax/pearlandbloom.us@gmail.com';
 
  function makeOrderNumber(){
    const stamp=Date.now().toString().slice(-5);
