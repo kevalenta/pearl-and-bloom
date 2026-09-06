@@ -1,12 +1,11 @@
 // Pearl & Bloom — the tiny backend.
 //
 // Two jobs:
-//   POST /api/order            take an order from the checkout form, save it, email the shop
+//   POST /api/order               take an order from the checkout form, save it, email the shop + customer
 //   GET  /api/order?number&email  look an order up so "Track an order" works
 //
 // Everything else (the HTML, CSS, JS, photos) is served automatically from public/.
-
-import { EmailMessage } from "cloudflare:email";
+// Email goes out through Microsoft 365 (Graph API) as orders@pearlandbloom.us.
 
 export default {
   async fetch(request, env) {
@@ -74,9 +73,9 @@ async function placeOrder(request, env) {
     .bind(number, createdAt, order.customer, order.email, order.phone, order.address, order.city, order.state, order.zip, order.notes, JSON.stringify(items), total)
     .run();
 
-  // Email the shop. If this fails the order is still saved, so don't fail the request.
+  // Email the shop and the customer. If this fails the order is still saved, so don't fail the request.
   try {
-    await sendOrderEmail(env, { number, createdAt, ...order, items, total });
+    await sendOrderEmails(env, { number, createdAt, ...order, items, total });
   } catch (err) {
     console.log("email failed", String(err));
   }
@@ -94,43 +93,78 @@ async function makeOrderNumber(env) {
   return "PB-" + Date.now().toString().slice(-6);
 }
 
-async function sendOrderEmail(env, o) {
-  const to = env.EMAIL_TO || "pearlandbloom.us@gmail.com";
+// ---------- email via Microsoft 365 (Graph) ----------
+
+async function graphToken(env) {
+  const res = await fetch(`https://login.microsoftonline.com/${env.MS_TENANT_ID}/oauth2/v2.0/token`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: env.MS_CLIENT_ID,
+      client_secret: env.MS_CLIENT_SECRET,
+      scope: "https://graph.microsoft.com/.default",
+      grant_type: "client_credentials",
+    }),
+  });
+  if (!res.ok) throw new Error("token " + res.status + " " + (await res.text()));
+  return (await res.json()).access_token;
+}
+
+async function graphSend(env, token, { to, subject, text, replyTo }) {
   const from = env.SHOP_FROM || "orders@pearlandbloom.us";
-  const lines = o.items.map((it, i) => `${i + 1}. ${it.name} — $${it.price.toFixed(2)}`).join("\n");
-  const text = [
-    `New ${env.SHOP_NAME || "Pearl & Bloom"} order ${o.number}`,
-    ``,
-    `Items:`,
-    lines,
-    ``,
-    `Total: $${o.total.toFixed(2)}`,
-    ``,
-    `Ship to:`,
-    o.customer,
-    o.address,
-    `${o.city}, ${o.state} ${o.zip}`,
-    o.phone ? `Phone: ${o.phone}` : ``,
-    `Email: ${o.email}`,
-    o.notes ? `\nNotes: ${o.notes}` : ``,
-    ``,
-    `Placed: ${o.createdAt}`,
-  ].join("\n");
+  const message = {
+    subject,
+    body: { contentType: "Text", content: text },
+    toRecipients: [{ emailAddress: { address: to } }],
+  };
+  if (replyTo) message.replyTo = [{ emailAddress: { address: replyTo } }];
+  const res = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(from)}/sendMail`, {
+    method: "POST",
+    headers: { authorization: "Bearer " + token, "content-type": "application/json" },
+    body: JSON.stringify({ message, saveToSentItems: true }),
+  });
+  if (!res.ok && res.status !== 202) throw new Error("sendMail " + res.status + " " + (await res.text()));
+}
 
-  const raw = [
-    `From: ${env.SHOP_NAME || "Pearl & Bloom"} <${from}>`,
-    `To: ${to}`,
-    `Reply-To: ${o.email}`,
-    `Subject: New order ${o.number} - $${o.total.toFixed(2)} from ${o.customer}`,
-    `Message-ID: <${crypto.randomUUID()}@pearlandbloom.us>`,
-    `Date: ${new Date().toUTCString()}`,
-    `MIME-Version: 1.0`,
-    `Content-Type: text/plain; charset=utf-8`,
-    ``,
-    text,
-  ].join("\r\n");
+async function sendOrderEmails(env, o) {
+  const shopName = env.SHOP_NAME || "Pearl & Bloom";
+  const shopTo = env.SHOP_FROM || "orders@pearlandbloom.us";
+  const lines = o.items.map((it, i) => `${i + 1}. ${it.name} - $${it.price.toFixed(2)}`).join("\n");
+  const shipTo = [o.customer, o.address, `${o.city}, ${o.state} ${o.zip}`, o.phone ? `Phone: ${o.phone}` : ""].filter(Boolean).join("\n");
 
-  await env.EMAIL.send(new EmailMessage(from, to, raw));
+  const token = await graphToken(env);
+
+  // 1. Notification to the shop inbox (reply goes straight to the customer).
+  await graphSend(env, token, {
+    to: shopTo,
+    replyTo: o.email,
+    subject: `New order ${o.number} - $${o.total.toFixed(2)} from ${o.customer}`,
+    text: [
+      `New ${shopName} order ${o.number}`, ``,
+      `Items:`, lines, ``,
+      `Total: $${o.total.toFixed(2)}`, ``,
+      `Ship to:`, shipTo, `Email: ${o.email}`,
+      o.notes ? `\nNotes: ${o.notes}` : ``, ``,
+      `Placed: ${o.createdAt}`,
+    ].join("\n"),
+  });
+
+  // 2. Confirmation to the customer.
+  const venmo = env.VENMO_HANDLE ? `\nTo pay, send $${o.total.toFixed(2)} on Venmo to ${env.VENMO_HANDLE} and put ${o.number} in the note.\n` : "";
+  await graphSend(env, token, {
+    to: o.email,
+    subject: `${shopName} order ${o.number} received`,
+    text: [
+      `Hi ${o.customer.split(" ")[0]},`, ``,
+      `Thank you for your ${shopName} order! Your order number is ${o.number}.`, ``,
+      lines, ``,
+      `Total: $${o.total.toFixed(2)}`,
+      venmo,
+      `We'll ship to:`, shipTo, ``,
+      `You can check your order any time at https://pearlandbloom.us/#orders using this number and your email.`, ``,
+      `Handmade with love,`, shopName,
+    ].join("\n"),
+  });
 }
 
 // ---------- looking an order up ----------

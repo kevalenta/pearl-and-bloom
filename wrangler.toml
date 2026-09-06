@@ -15,12 +15,10 @@ binding = "DB"
 database_name = "pearl-and-bloom"
 database_id = "935a5419-243a-4340-b84c-9c654b322a0b"
 
-# Outgoing order emails. The destination must be a verified address under
-# Email Routing for pearlandbloom.us (Cloudflare dashboard → Email Routing).
-[[send_email]]
-name = "EMAIL"
-destination_address = "pearlandbloom.us@gmail.com"
-
+# Email is sent through Microsoft 365 (Graph API) as orders@pearlandbloom.us.
+# Secrets (set in the Cloudflare dashboard → Worker → Settings → Variables, never in git):
+#   MS_TENANT_ID, MS_CLIENT_ID, MS_CLIENT_SECRET
 [vars]
 SHOP_FROM = "orders@pearlandbloom.us"
 SHOP_NAME = "Pearl & Bloom"
+VENMO_HANDLE = ""
