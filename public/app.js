@@ -130,6 +130,7 @@ document.querySelectorAll('.charm-btn').forEach(btn=>{
 });
 
 (function(){
+ // ---- Checkout: send the order to our own backend (/api/order) ----
  const checkout=document.getElementById('checkoutBtn');
  const checkoutOverlay=document.getElementById('checkoutOverlay');
  const checkoutForm=document.getElementById('orderCheckoutForm');
@@ -139,16 +140,15 @@ document.querySelectorAll('.charm-btn').forEach(btn=>{
  const checkoutError=document.getElementById('checkoutError');
  const confirmBox=document.getElementById('orderConfirmOverlay');
  const numberBox=document.getElementById('newOrderNumber');
+ const payBox=document.getElementById('payBox');
  const done=document.getElementById('closeOrderConfirm');
- const orderEmailEndpoint='https://formsubmit.co/ajax/pearlandbloom.us@gmail.com';
 
- function makeOrderNumber(){
-   const stamp=Date.now().toString().slice(-5);
-   const random=Math.floor(10+Math.random()*90);
-   return 'PB-'+stamp+random;
- }
+ // Fill these in when the Venmo QR is ready: image goes in img/venmo-qr.png
+ const VENMO_HANDLE='';          // e.g. '@Pearl-and-Bloom'
+ const VENMO_QR='img/venmo-qr.png';
+
  function orderTotal(){return cart.reduce((a,b)=>a+b.price,0);}
- function orderItemsText(){return cart.map((x,i)=>`${i+1}. ${x.name} — $${x.price.toFixed(2)}`).join('\n');}
+ function showError(msg){checkoutError.textContent=msg;checkoutError.style.display='block';}
  function showCheckout(){
    if(!cart.length){alert('Your cart is empty! 🌸');return;}
    checkoutSummary.innerHTML='<strong>Order:</strong><br>'+cart.map(x=>`${x.name} — $${x.price.toFixed(2)}`).join('<br>')+`<br><br><strong>Total: $${orderTotal().toFixed(2)}</strong>`;
@@ -161,53 +161,70 @@ document.querySelectorAll('.charm-btn').forEach(btn=>{
  if(cancelCheckout) cancelCheckout.addEventListener('click',hideCheckout);
  if(checkoutOverlay) checkoutOverlay.addEventListener('click',e=>{if(e.target===checkoutOverlay)hideCheckout();});
 
+ function showConfirmation(number,total){
+   numberBox.textContent=number;
+   if(VENMO_HANDLE){
+     payBox.innerHTML=`<p><strong>Total: $${total.toFixed(2)}</strong></p><p>Pay with Venmo to <strong>${VENMO_HANDLE}</strong> and put <strong>${number}</strong> in the note.</p><img src="${VENMO_QR}" alt="Venmo QR code" class="venmo-qr">`;
+   } else {
+     payBox.innerHTML=`<p><strong>Total: $${total.toFixed(2)}</strong></p><p>We'll email you about payment and shipping. 💕</p>`;
+   }
+   hideCheckout();
+   confirmBox.classList.add('open');
+ }
+
  if(checkoutForm){
-   checkoutForm.addEventListener('submit',function(e){
-     if(location.protocol==='file:'){
-       e.preventDefault();
-       checkoutError.textContent='Email checkout cannot send while this page is opened as a file. Use the Start Pearl & Bloom file so the address begins with http://localhost:8000.';
-       checkoutError.style.display='block';
-       return;
+   checkoutForm.addEventListener('submit',async function(e){
+     e.preventDefault();
+     if(!cart.length){hideCheckout();alert('Your cart is empty! 🌸');return;}
+     const val=id=>document.getElementById(id).value.trim();
+     const order={
+       customer:val('orderName'), email:val('orderEmail'), phone:val('orderPhone'),
+       address:val('orderAddress'), city:val('orderCity'), state:val('orderState'), zip:val('orderZip'),
+       notes:val('orderNotes'), website:val('orderWebsite'),
+       items:cart.map(x=>({name:x.name,price:x.price}))
+     };
+     if(!order.customer||!order.email.includes('@')||!order.address||!order.city||!order.state||!order.zip){
+       showError('Please fill in every shipping field.');return;
      }
-     if(!cart.length){
-       e.preventDefault();
-       hideCheckout();
-       alert('Your cart is empty! 🌸');
-       return;
-     }
-     document.getElementById('fsUrl').value=location.href;
-     const orderNumber=makeOrderNumber();
-     document.getElementById('fsSubject').value=`New Pearl & Bloom Order ${orderNumber}`;
-     document.getElementById('fsReplyTo').value=document.getElementById('orderEmail').value.trim();
-     document.getElementById('fsOrderNumber').value=orderNumber;
-     document.getElementById('fsItems').value=orderItemsText();
-     document.getElementById('fsTotal').value=`$${orderTotal().toFixed(2)}`;
-
-     placeOrderBtn.textContent='Sending...';
-     checkoutForm.classList.add('checkout-sending');
+     placeOrderBtn.disabled=true; placeOrderBtn.textContent='Sending...';
      checkoutError.style.display='none';
-
-     const saved=JSON.parse(localStorage.getItem('pearlBloomOrders')||'[]');
-     saved.push({
-       number:orderNumber,
-       total:orderTotal(),
-       items:[...cart],
-       customer:document.getElementById('orderName').value.trim(),
-       email:document.getElementById('orderEmail').value.trim(),
-       address:document.getElementById('orderAddress').value.trim(),
-       city:document.getElementById('orderCity').value.trim(),
-       state:document.getElementById('orderState').value.trim(),
-       zip:document.getElementById('orderZip').value.trim(),
-       date:new Date().toISOString()
-     });
-     localStorage.setItem('pearlBloomOrders',JSON.stringify(saved));
-
-     // The browser now performs a normal POST to FormSubmit.
-     // FormSubmit will show its confirmation/activation page after the submission.
+     try{
+       const res=await fetch('/api/order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(order)});
+       const data=await res.json();
+       if(!res.ok||!data.ok) throw new Error(data.error||'Something went wrong.');
+       showConfirmation(data.number,data.total);
+       checkoutForm.reset();
+     }catch(err){
+       showError(err.message||"We couldn't send the order. Please try again.");
+     }finally{
+       placeOrderBtn.disabled=false; placeOrderBtn.textContent='Place order';
+     }
    });
  }
  if(done) done.addEventListener('click',function(){
    confirmBox.classList.remove('open');
    cart.length=0; renderCart(); closeCart();
  });
+
+ // ---- Track an order ----
+ const trackForm=document.getElementById('trackForm');
+ const trackResult=document.getElementById('trackResult');
+ if(trackForm){
+   trackForm.addEventListener('submit',async function(e){
+     e.preventDefault();
+     const number=document.getElementById('trackNumber').value.trim();
+     const email=document.getElementById('trackEmail').value.trim();
+     trackResult.hidden=false; trackResult.textContent='Looking...';
+     try{
+       const res=await fetch(`/api/order?number=${encodeURIComponent(number)}&email=${encodeURIComponent(email)}`);
+       const data=await res.json();
+       if(!res.ok) throw new Error(data.error||'Not found.');
+       const when=new Date(data.placed).toLocaleDateString();
+       const labels={new:'Received 🌸',paid:'Paid 💕',shipped:'Shipped 📬',done:'Delivered ✨'};
+       trackResult.innerHTML=`<strong>${data.number}</strong> · placed ${when}<br>Status: <strong>${labels[data.status]||data.status}</strong><br>`+data.items.map(i=>`${i.name} — $${i.price.toFixed(2)}`).join('<br>')+`<br><strong>Total: $${data.total.toFixed(2)}</strong>`;
+     }catch(err){
+       trackResult.textContent=err.message||'Something went wrong.';
+     }
+   });
+ }
 })();

@@ -1,0 +1,26 @@
+name = "pearl-and-bloom"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# The static site (index.html, style.css, app.js, img/) lives in public/.
+# Requests for real files are served straight from there; anything else
+# (like /api/order) goes to the Worker in src/index.js.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Orders database (Cloudflare D1 = SQLite). Schema lives in migrations/.
+[[d1_databases]]
+binding = "DB"
+database_name = "pearl-and-bloom"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# Outgoing order emails. The destination must be a verified address under
+# Email Routing for pearlandbloom.us (Cloudflare dashboard → Email Routing).
+[[send_email]]
+name = "EMAIL"
+destination_address = "pearlandbloom.us@gmail.com"
+
+[vars]
+SHOP_FROM = "orders@pearlandbloom.us"
+SHOP_NAME = "Pearl & Bloom"

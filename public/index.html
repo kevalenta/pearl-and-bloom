@@ -58,7 +58,8 @@
 <section class="orders" id="orders">
  <h2>Track an order</h2>
  <p>Enter the order number and email address used for your order.</p>
- <div class="order-box"><input placeholder="Order number"><input type="email" placeholder="Email address"><button class="primary">Find order</button></div>
+ <form class="order-box" id="trackForm"><input id="trackNumber" placeholder="Order number" autocomplete="off"><input id="trackEmail" type="email" placeholder="Email address" autocomplete="email"><button class="primary" type="submit">Find order</button></form>
+ <div class="track-result" id="trackResult" hidden></div>
 </section>
 
 <section class="reviews">
@@ -84,15 +85,8 @@
   <div class="checkout-card" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
     <h2 id="checkoutTitle">Shipping details ♡</h2>
     <p>Enter where you want your Pearl &amp; Bloom order mailed.</p>
-    <form id="orderCheckoutForm" action="https://formsubmit.co/pearlandbloom.us@gmail.com" method="POST">
-      <input type="hidden" name="_subject" id="fsSubject" value="New Pearl &amp; Bloom Order">
-      <input type="hidden" name="_template" value="table">
-      <input type="hidden" name="_captcha" value="false">
-      <input type="hidden" name="_url" id="fsUrl" value="">
-      <input type="hidden" name="_replyto" id="fsReplyTo" value="">
-      <input type="hidden" name="Order number" id="fsOrderNumber" value="">
-      <input type="hidden" name="Items" id="fsItems" value="">
-      <input type="hidden" name="Order total" id="fsTotal" value="">
+    <form id="orderCheckoutForm" novalidate>
+      <input type="text" name="website" id="orderWebsite" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0">
       <div class="checkout-grid">
         <label class="full">Full name<input id="orderName" name="Customer name" autocomplete="name" required></label>
         <label class="full">Email<input id="orderEmail" name="Customer email" type="email" autocomplete="email" required></label>
@@ -120,6 +114,7 @@
     <p>Your Pearl &amp; Bloom order number is:</p>
     <div class="order-number" id="newOrderNumber">PB-000000</div>
     <p class="save-order">Save this number so you can look up your order later.</p>
+    <div class="pay-box" id="payBox"></div>
     <button class="primary" id="closeOrderConfirm">Done</button>
   </div>
 </div>
