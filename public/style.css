@@ -553,3 +553,14 @@ footer{padding:26px;text-align:center;background:linear-gradient(90deg,#ffe8f0,#
 @media(max-width:700px){
   .hero-title{font-size:clamp(40px,11vw,62px) !important}
 }
+
+/* ===== Product photos: show the whole item, not a cropped strip ===== */
+/* The photos are tall (900x1200), but the photo frame was short and
+   wide, so the top and bottom of each necklace got cut off. On phones
+   and tablets the frame now matches the shape of the photos. */
+@media(max-width:900px){
+  .product-photo{height:auto;aspect-ratio:3/4}
+}
+/* This one photo is wide instead of tall, so nudge the crop left to
+   keep the whole bracelet in the frame. */
+.real-photo img[src*="blue-skies-smiley"]{object-position:40% center}
