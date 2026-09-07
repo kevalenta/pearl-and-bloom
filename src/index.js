@@ -27,6 +27,15 @@ export default {
 
 // ---------- placing an order ----------
 
+// The three ways an order can get to the customer. The checkout page shows the
+// same three, but these prices are the ones that count: the page only sends the
+// key ("local" / "first" / "ground"), never a dollar amount.
+const SHIPPING = {
+  local: { label: "Free local delivery (Palmas Del Mar)", price: 0 },
+  first: { label: "First Class Mail (not trackable)", price: 2 },
+  ground: { label: "USPS Ground Advantage (trackable)", price: 7 },
+};
+
 async function placeOrder(request, env) {
   let body;
   try {
@@ -48,12 +57,14 @@ async function placeOrder(request, env) {
     state: clean(body.state, 40),
     zip: clean(body.zip, 20),
     notes: clean(body.notes, 1000),
+    shipping: clean(body.shipping, 20),
     items: Array.isArray(body.items) ? body.items.slice(0, 50) : [],
   };
 
   if (!order.customer || !order.email.includes("@") || !order.address || !order.city || !order.state || !order.zip) {
     return json({ error: "Please fill in every shipping field." }, 400);
   }
+  if (!SHIPPING[order.shipping]) return json({ error: "Please pick a shipping option." }, 400);
   if (!order.items.length) return json({ error: "Your cart is empty." }, 400);
 
   // Prices come from the page, but re-add them here so the email total is honest.
@@ -61,21 +72,23 @@ async function placeOrder(request, env) {
     name: clean(it.name, 200),
     price: Math.max(0, Math.round(Number(it.price) * 100) / 100 || 0),
   }));
-  const total = Math.round(items.reduce((sum, it) => sum + it.price, 0) * 100) / 100;
+  const shipping = SHIPPING[order.shipping];
+  const subtotal = Math.round(items.reduce((sum, it) => sum + it.price, 0) * 100) / 100;
+  const total = Math.round((subtotal + shipping.price) * 100) / 100;
 
   const number = await makeOrderNumber(env);
   const createdAt = new Date().toISOString();
 
   await env.DB.prepare(
-    `INSERT INTO orders (number, created_at, status, customer, email, phone, address, city, state, zip, notes, items_json, total)
-     VALUES (?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO orders (number, created_at, status, customer, email, phone, address, city, state, zip, notes, items_json, shipping_method, shipping_cost, total)
+     VALUES (?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(number, createdAt, order.customer, order.email, order.phone, order.address, order.city, order.state, order.zip, order.notes, JSON.stringify(items), total)
+    .bind(number, createdAt, order.customer, order.email, order.phone, order.address, order.city, order.state, order.zip, order.notes, JSON.stringify(items), shipping.label, shipping.price, total)
     .run();
 
   // Email the shop and the customer. If this fails the order is still saved, so don't fail the request.
   try {
-    await sendOrderEmails(env, { number, createdAt, ...order, items, total });
+    await sendOrderEmails(env, { number, createdAt, ...order, items, subtotal, shipping, total });
   } catch (err) {
     console.log("email failed", String(err));
   }
@@ -142,6 +155,8 @@ async function sendOrderEmails(env, o) {
     text: [
       `New ${shopName} order ${o.number}`, ``,
       `Items:`, lines, ``,
+      `Subtotal: $${o.subtotal.toFixed(2)}`,
+      `Shipping: ${o.shipping.label} - $${o.shipping.price.toFixed(2)}`,
       `Total: $${o.total.toFixed(2)}`, ``,
       `Ship to:`, shipTo, `Email: ${o.email}`,
       o.notes ? `\nNotes: ${o.notes}` : ``, ``,
@@ -158,9 +173,11 @@ async function sendOrderEmails(env, o) {
       `Hi ${o.customer.split(" ")[0]},`, ``,
       `Thank you for your ${shopName} order! Your order number is ${o.number}.`, ``,
       lines, ``,
+      `Subtotal: $${o.subtotal.toFixed(2)}`,
+      `Shipping: ${o.shipping.label} - $${o.shipping.price.toFixed(2)}`,
       `Total: $${o.total.toFixed(2)}`,
       venmo,
-      `We'll ship to:`, shipTo, ``,
+      o.shipping.price === 0 ? `We'll deliver to:` : `We'll ship to:`, shipTo, ``,
       `You can check your order any time at https://pearlandbloom.us/#orders using this number and your email.`, ``,
       `Handmade with love,`, shopName,
     ].join("\n"),
@@ -175,7 +192,7 @@ async function findOrder(url, env) {
   if (!number || !email) return json({ error: "Enter your order number and email." }, 400);
 
   const row = await env.DB.prepare(
-    "SELECT number, created_at, status, items_json, total FROM orders WHERE number = ? AND email = ?"
+    "SELECT number, created_at, status, items_json, shipping_method, shipping_cost, total FROM orders WHERE number = ? AND email = ?"
   )
     .bind(number, email)
     .first();
@@ -187,6 +204,8 @@ async function findOrder(url, env) {
     placed: row.created_at,
     status: row.status,
     items: JSON.parse(row.items_json),
+    shipping: row.shipping_method || "",
+    shippingCost: row.shipping_cost || 0,
     total: row.total,
   });
 }

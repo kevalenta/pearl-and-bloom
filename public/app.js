@@ -147,11 +147,37 @@ document.querySelectorAll('.charm-btn').forEach(btn=>{
  const VENMO_HANDLE='@Melissa-Valenta-1';
  const VENMO_QR='img/venmo-qr.png';
 
- function orderTotal(){return cart.reduce((a,b)=>a+b.price,0);}
+ // The three ways an order can get to you. The same list lives in src/index.js,
+ // and the price the customer really pays is the one the server looks up there.
+ const SHIPPING={
+   local:{label:'Free local delivery (Palmas Del Mar)',price:0},
+   first:{label:'First Class Mail (not trackable)',price:2},
+   ground:{label:'USPS Ground Advantage (trackable)',price:7}
+ };
+ const shippingInputs=document.querySelectorAll('#shippingChoices input[name="shipping"]');
+
+ function pickedShipping(){
+   const chosen=document.querySelector('#shippingChoices input[name="shipping"]:checked');
+   return chosen?chosen.value:'';
+ }
+ function subtotal(){return cart.reduce((a,b)=>a+b.price,0);}
+ function shippingCost(){return SHIPPING[pickedShipping()]?SHIPPING[pickedShipping()].price:0;}
+ function orderTotal(){return subtotal()+shippingCost();}
  function showError(msg){checkoutError.textContent=msg;checkoutError.style.display='block';}
+
+ function renderSummary(){
+   const key=pickedShipping();
+   const ship=key?`${SHIPPING[key].label} — $${SHIPPING[key].price.toFixed(2)}`:'Pick one above';
+   checkoutSummary.innerHTML='<strong>Order:</strong><br>'
+     +cart.map(x=>`${x.name} — $${x.price.toFixed(2)}`).join('<br>')
+     +`<br><br>Subtotal: $${subtotal().toFixed(2)}<br>Shipping: ${ship}`
+     +`<br><br><strong>Total: $${orderTotal().toFixed(2)}</strong>`;
+ }
+ shippingInputs.forEach(input=>input.addEventListener('change',renderSummary));
+
  function showCheckout(){
    if(!cart.length){alert('Your cart is empty! 🌸');return;}
-   checkoutSummary.innerHTML='<strong>Order:</strong><br>'+cart.map(x=>`${x.name} — $${x.price.toFixed(2)}`).join('<br>')+`<br><br><strong>Total: $${orderTotal().toFixed(2)}</strong>`;
+   renderSummary();
    checkoutError.style.display='none';
    checkoutOverlay.classList.add('open');
    checkoutOverlay.setAttribute('aria-hidden','false');
@@ -182,10 +208,14 @@ document.querySelectorAll('.charm-btn').forEach(btn=>{
        customer:val('orderName'), email:val('orderEmail'), phone:val('orderPhone'),
        address:val('orderAddress'), city:val('orderCity'), state:val('orderState'), zip:val('orderZip'),
        notes:val('orderNotes'), website:val('orderWebsite'),
+       shipping:pickedShipping(),
        items:cart.map(x=>({name:x.name,price:x.price}))
      };
      if(!order.customer||!order.email.includes('@')||!order.address||!order.city||!order.state||!order.zip){
        showError('Please fill in every shipping field.');return;
+     }
+     if(!order.shipping){
+       showError('Please pick a shipping option.');return;
      }
      placeOrderBtn.disabled=true; placeOrderBtn.textContent='Sending...';
      checkoutError.style.display='none';
@@ -195,6 +225,7 @@ document.querySelectorAll('.charm-btn').forEach(btn=>{
        if(!res.ok||!data.ok) throw new Error(data.error||'Something went wrong.');
        showConfirmation(data.number,data.total);
        checkoutForm.reset();
+       renderSummary();
      }catch(err){
        showError(err.message||"We couldn't send the order. Please try again.");
      }finally{
@@ -222,7 +253,8 @@ document.querySelectorAll('.charm-btn').forEach(btn=>{
        if(!res.ok) throw new Error(data.error||'Not found.');
        const when=new Date(data.placed).toLocaleDateString();
        const labels={new:'Received 🌸',paid:'Paid 💕',shipped:'Shipped 📬',done:'Delivered ✨'};
-       trackResult.innerHTML=`<strong>${data.number}</strong> · placed ${when}<br>Status: <strong>${labels[data.status]||data.status}</strong><br>`+data.items.map(i=>`${i.name} — $${i.price.toFixed(2)}`).join('<br>')+`<br><strong>Total: $${data.total.toFixed(2)}</strong>`;
+       const shipLine=data.shipping?`<br>Shipping: ${data.shipping} — $${data.shippingCost.toFixed(2)}`:'';
+       trackResult.innerHTML=`<strong>${data.number}</strong> · placed ${when}<br>Status: <strong>${labels[data.status]||data.status}</strong><br>`+data.items.map(i=>`${i.name} — $${i.price.toFixed(2)}`).join('<br>')+shipLine+`<br><strong>Total: $${data.total.toFixed(2)}</strong>`;
      }catch(err){
        trackResult.textContent=err.message||'Something went wrong.';
      }

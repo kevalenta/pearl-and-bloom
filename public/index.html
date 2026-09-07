@@ -75,7 +75,8 @@
 <aside class="cart-drawer" id="cartDrawer">
  <div class="cart-head"><h2>Your Cart</h2><button id="cartClose">×</button></div>
  <div id="cartItems" class="cart-items"><p>Your cart is empty.</p></div>
- <div class="cart-total"><span>Total</span><span id="cartTotal">$0.00</span></div>
+ <div class="cart-total"><span>Subtotal</span><span id="cartTotal">$0.00</span></div>
+ <p class="cart-note">Shipping is picked at checkout.</p>
  <button class="add-btn" id="checkoutBtn">Checkout</button>
 </aside>
 <div id="overlay" class="overlay"></div>
@@ -97,6 +98,21 @@
         <label>Phone (optional)<input id="orderPhone" name="Phone" type="tel" autocomplete="tel"></label>
         <label class="full">Order notes (optional)<textarea id="orderNotes" name="Order notes" rows="3" placeholder="Anything we should know?"></textarea></label>
       </div>
+      <fieldset class="shipping-choices" id="shippingChoices">
+        <legend>Pick how you want it delivered</legend>
+        <label class="ship-option">
+          <input type="radio" name="shipping" value="local">
+          <span><strong>Free &mdash; I live in Palmas Del Mar</strong><br>Hand delivered, no shipping charge.</span>
+        </label>
+        <label class="ship-option">
+          <input type="radio" name="shipping" value="first">
+          <span><strong>First Class Mail &mdash; $2.00</strong><br>Mailed to you. Not trackable.</span>
+        </label>
+        <label class="ship-option">
+          <input type="radio" name="shipping" value="ground">
+          <span><strong>USPS Ground Advantage &mdash; $7.00</strong><br>Mailed to you with tracking.</span>
+        </label>
+      </fieldset>
       <div class="checkout-summary" id="checkoutSummary"></div>
       <div class="checkout-actions">
         <button type="button" class="secondary-checkout" id="cancelCheckout">Back</button>
