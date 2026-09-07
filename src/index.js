@@ -33,7 +33,7 @@ export default {
 const SHIPPING = {
   local: { label: "Free local delivery (Palmas Del Mar)", price: 0 },
   first: { label: "First Class Mail (not trackable)", price: 2 },
-  ground: { label: "USPS Ground Advantage (trackable)", price: 7 },
+  ground: { label: "USPS Ground Advantage (trackable)", price: 8.5 },
 };
 
 async function placeOrder(request, env) {
