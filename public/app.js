@@ -144,7 +144,7 @@ document.querySelectorAll('.charm-btn').forEach(btn=>{
  const done=document.getElementById('closeOrderConfirm');
 
  // Fill these in when the Venmo QR is ready: image goes in img/venmo-qr.png
- const VENMO_HANDLE='';          // e.g. '@Pearl-and-Bloom'
+ const VENMO_HANDLE='@Melissa-Valenta-1';
  const VENMO_QR='img/venmo-qr.png';
 
  function orderTotal(){return cart.reduce((a,b)=>a+b.price,0);}
@@ -164,7 +164,8 @@ document.querySelectorAll('.charm-btn').forEach(btn=>{
  function showConfirmation(number,total){
    numberBox.textContent=number;
    if(VENMO_HANDLE){
-     payBox.innerHTML=`<p><strong>Total: $${total.toFixed(2)}</strong></p><p>Pay with Venmo to <strong>${VENMO_HANDLE}</strong> and put <strong>${number}</strong> in the note.</p><img src="${VENMO_QR}" alt="Venmo QR code" class="venmo-qr">`;
+     const payUrl=`https://venmo.com/${VENMO_HANDLE.replace('@','')}?txn=pay&amount=${total.toFixed(2)}&note=${encodeURIComponent(number)}`;
+     payBox.innerHTML=`<p><strong>Total: $${total.toFixed(2)}</strong></p><p>Pay with Venmo to <strong>${VENMO_HANDLE}</strong> and put <strong>${number}</strong> in the note.</p><p><a class="primary venmo-btn" href="${payUrl}" target="_blank" rel="noopener">Open Venmo to pay</a></p><img src="${VENMO_QR}" alt="Venmo QR code for ${VENMO_HANDLE}" class="venmo-qr">`;
    } else {
      payBox.innerHTML=`<p><strong>Total: $${total.toFixed(2)}</strong></p><p>We'll email you about payment and shipping. 💕</p>`;
    }

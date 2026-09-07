@@ -508,3 +508,5 @@ footer{padding:26px;text-align:center;background:linear-gradient(90deg,#ffe8f0,#
 .track-result{margin:14px auto 0;max-width:520px;padding:14px 18px;border-radius:16px;background:#fff7fb;border:2px dashed #f2c9dc;color:#8b6f87;line-height:1.6;text-align:left}
 .pay-box{margin-top:14px;padding:12px 14px;border-radius:16px;background:#fff7fb;border:2px dashed #f2c9dc;color:#8b6f87;line-height:1.5}
 .venmo-qr{display:block;margin:10px auto 0;width:180px;max-width:100%;border-radius:12px}
+.venmo-btn{display:inline-block;background:#3D95CE;color:#fff;border-radius:999px;padding:10px 18px;text-decoration:none;font-weight:600}
+.venmo-btn:hover{background:#2f7fb3}

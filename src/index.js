@@ -150,7 +150,7 @@ async function sendOrderEmails(env, o) {
   });
 
   // 2. Confirmation to the customer.
-  const venmo = env.VENMO_HANDLE ? `\nTo pay, send $${o.total.toFixed(2)} on Venmo to ${env.VENMO_HANDLE} and put ${o.number} in the note.\n` : "";
+  const venmo = env.VENMO_HANDLE ? `\nTo pay, send $${o.total.toFixed(2)} on Venmo to ${env.VENMO_HANDLE} and put ${o.number} in the note.\nTap to pay: https://venmo.com/${env.VENMO_HANDLE.replace("@", "")}?txn=pay&amount=${o.total.toFixed(2)}&note=${encodeURIComponent(o.number)}\n` : "";
   await graphSend(env, token, {
     to: o.email,
     subject: `${shopName} order ${o.number} received`,

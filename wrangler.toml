@@ -21,6 +21,6 @@ database_id = "935a5419-243a-4340-b84c-9c654b322a0b"
 [vars]
 SHOP_FROM = "orders@pearlandbloom.us"
 SHOP_NAME = "Pearl & Bloom"
-VENMO_HANDLE = ""
+VENMO_HANDLE = "@Melissa-Valenta-1"
 MS_TENANT_ID = "72c2ab32-2a98-491b-8b3a-dbe01d059eaf"
 MS_CLIENT_ID = "da69682b-520e-44ef-a2d8-6d5291f36a2b"
