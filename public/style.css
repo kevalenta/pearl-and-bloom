@@ -510,3 +510,46 @@ footer{padding:26px;text-align:center;background:linear-gradient(90deg,#ffe8f0,#
 .venmo-qr{display:block;margin:10px auto 0;width:180px;max-width:100%;border-radius:12px}
 .venmo-btn{display:inline-block;background:#3D95CE;color:#fff;border-radius:999px;padding:10px 18px;text-decoration:none;font-weight:600}
 .venmo-btn:hover{background:#2f7fb3}
+
+/* ===== Fit any window width (nothing overlaps when narrow) ===== */
+
+/* Each 🌸 is its own span, so we can show fewer of them
+   as the window gets narrower and the words need the space. */
+.emoji-flowers span{margin:0 3px}
+
+/* Headings shrink smoothly instead of staying one fixed size. */
+.section-title,.custom-card h2,.orders h2,.reviews h2{font-size:clamp(26px,5.5vw,38px)}
+
+/* Medium window: keep one flower on each side, tucked to the edge. */
+@media(max-width:1150px){
+  .emoji-flowers span:nth-child(2),
+  .emoji-flowers span:nth-child(3){display:none}
+  .emoji-flowers.left{left:.5vw !important}
+  .emoji-flowers.right{right:.5vw !important}
+}
+
+/* Small window: the floating petals were landing on the words. */
+@media(max-width:900px){
+  .petal{display:none}
+}
+
+/* Narrow window: put one row of flowers ABOVE the name instead of
+   floating them beside it, so nothing can sit on top of the text. */
+@media(max-width:900px){
+  .emoji-flowers.left{
+    position:static !important;
+    transform:none !important;
+    font-size:36px !important;
+    opacity:1 !important;
+    margin:0 0 2px !important;
+  }
+  .emoji-flowers.left span{display:inline !important}
+  .emoji-flowers.right{display:none !important}
+  .hero{padding-top:24px !important}
+  .bio{margin-top:16px !important}
+}
+
+/* Very narrow window: let the shop name shrink with the screen. */
+@media(max-width:700px){
+  .hero-title{font-size:clamp(40px,11vw,62px) !important}
+}
