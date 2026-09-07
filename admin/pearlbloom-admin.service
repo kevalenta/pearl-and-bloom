@@ -1,0 +1,15 @@
+[Unit]
+Description=Pearl & Bloom admin (tailnet only)
+After=network-online.target
+
+[Service]
+User=harbourlab
+WorkingDirectory=/var/app/pearl-and-bloom/admin
+EnvironmentFile=/etc/pearlbloom-admin.env
+Environment=PORT=8100
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

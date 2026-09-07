@@ -1,2 +1,3 @@
 # Wrangler's local build/dev cache
 .wrangler/
+node_modules/

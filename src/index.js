@@ -7,9 +7,24 @@
 // Everything else (the HTML, CSS, JS, photos) is served automatically from public/.
 // Email goes out through Microsoft 365 (Graph API) as orders@pearlandbloom.us.
 
+import { adminRouter, listProducts, servePhoto } from "./admin.js";
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    // Products for the shop page (managed from the tailnet-only admin page).
+    if (url.pathname === "/api/products" && request.method === "GET") {
+      return listProducts(env);
+    }
+    // Photos uploaded through the admin page.
+    if (url.pathname.startsWith("/photos/")) {
+      return servePhoto(url.pathname.slice("/photos/".length), env);
+    }
+    // Admin API — needs the secret token; see src/admin.js.
+    if (url.pathname.startsWith("/api/admin/")) {
+      return adminRouter(request, env, url);
+    }
 
     if (url.pathname === "/api/order" && request.method === "POST") {
       return placeOrder(request, env);
@@ -33,7 +48,7 @@ export default {
 const SHIPPING = {
   local: { label: "Free local delivery (Palmas Del Mar)", price: 0 },
   first: { label: "First Class Mail (not trackable)", price: 2 },
-  ground: { label: "USPS Ground Advantage (trackable)", price: 8.5 },
+  ground: { label: "USPS Ground Advantage (trackable)", price: 7 },
 };
 
 async function placeOrder(request, env) {
@@ -210,9 +225,47 @@ async function findOrder(url, env) {
   });
 }
 
-function json(data, status = 200) {
+export function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: { "content-type": "application/json; charset=utf-8", ...extraHeaders },
   });
+}
+
+// ---------- order status emails (sent from the admin page) ----------
+
+export async function sendStatusEmail(env, o, status) {
+  const shopName = env.SHOP_NAME || "Pearl & Bloom";
+  const first = (o.customer || "").split(" ")[0] || "there";
+  const items = (o.items || []).map((it, i) => `${i + 1}. ${it.name} - $${Number(it.price).toFixed(2)}`).join("\n");
+  const token = await graphToken(env);
+  if (status === "paid") {
+    await graphSend(env, token, {
+      to: o.email,
+      subject: `${shopName} order ${o.number} - payment received`,
+      text: [
+        `Hi ${first},`, ``,
+        `Thank you! We got your payment for order ${o.number}.`, ``,
+        items, ``,
+        `Total: $${Number(o.total).toFixed(2)}`, ``,
+        o.shipping_cost === 0 && o.shipping_method ? `We'll deliver it soon (${o.shipping_method}).` : `We'll get it packed up and let you know when it ships.`, ``,
+        `Handmade with love,`, shopName,
+      ].join("\n"),
+    });
+  } else if (status === "shipped") {
+    const local = o.shipping_cost === 0 && /local/i.test(o.shipping_method || "");
+    await graphSend(env, token, {
+      to: o.email,
+      subject: local ? `${shopName} order ${o.number} - delivered!` : `${shopName} order ${o.number} is on its way`,
+      text: [
+        `Hi ${first},`, ``,
+        local ? `Your order ${o.number} has been delivered.` : `Good news - your order ${o.number} has shipped!`,
+        o.shipping_method && !local ? `Shipping: ${o.shipping_method}` : ``, ``,
+        items, ``,
+        `You can check your order any time at https://pearlandbloom.us/#orders using this number and your email.`, ``,
+        `Thank you for supporting a small handmade shop!`, ``,
+        `Handmade with love,`, shopName,
+      ].join("\n"),
+    });
+  }
 }

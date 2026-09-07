@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Pearl & Bloom — Admin</title>
+<style>
+  :root{--pink:#ff8bb5;--pink-dark:#e974a2;--blush:#fff7fb;--line:#f2c9dc;--ink:#4a3b47;--muted:#8b6f87;--ok:#65aa8b;--warn:#e0a03c;--bad:#d9534f}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#fff;color:var(--ink)}
+  header{display:flex;align-items:center;gap:16px;padding:14px 20px;background:var(--blush);border-bottom:2px solid var(--line);position:sticky;top:0;z-index:5}
+  header h1{font-size:20px;margin:0;color:var(--pink-dark)}
+  header .who{margin-left:auto;font-size:13px;color:var(--muted)}
+  nav button{background:none;border:2px solid transparent;border-radius:999px;padding:8px 16px;font-weight:700;color:var(--muted);cursor:pointer;font-size:15px}
+  nav button.active{border-color:var(--pink);color:var(--pink-dark);background:#fff}
+  main{max-width:1100px;margin:0 auto;padding:20px}
+  section[hidden]{display:none}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .btn{background:var(--pink);color:#fff;border:0;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;font-size:14px}
+  .btn:hover{background:var(--pink-dark)} .btn.ghost{background:#fff;color:var(--pink-dark);border:2px solid var(--line)} .btn.small{padding:6px 12px;font-size:13px}
+  .btn.danger{background:#fff;color:var(--bad);border:2px solid #f3c5c3} .btn[disabled]{opacity:.5;cursor:default}
+  .chip{border:2px solid var(--line);background:#fff;border-radius:999px;padding:6px 14px;cursor:pointer;font-weight:600;color:var(--muted);font-size:13px}
+  .chip.active{background:var(--pink);border-color:var(--pink);color:#fff}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+  .card{border:2px solid var(--line);border-radius:18px;background:#fff;overflow:hidden;cursor:grab;position:relative}
+  .card.dragging{opacity:.4} .card.over{outline:3px dashed var(--pink)}
+  .card img,.card .nophoto{width:100%;aspect-ratio:1;object-fit:cover;background:var(--blush);display:block}
+  .card .nophoto{display:grid;place-items:center;font-size:40px}
+  .card .body{padding:10px 12px 12px}
+  .card h3{margin:0 0 4px;font-size:15px} .card .price{color:var(--pink-dark);font-weight:800}
+  .card .meta{font-size:12px;color:var(--muted)}
+  .card .flags{position:absolute;top:8px;left:8px;display:flex;gap:4px}
+  .flag{background:#fff;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800}
+  .flag.hidden{color:#888} .flag.sold{color:var(--bad)}
+  .card .actions{display:flex;gap:6px;margin-top:8px}
+  .overlay{position:fixed;inset:0;background:rgba(74,59,71,.45);display:none;place-items:center;z-index:10;padding:20px}
+  .overlay.open{display:grid}
+  .modal{background:#fff;border-radius:22px;width:min(720px,100%);max-height:95vh;overflow:auto;padding:22px;border:2px solid var(--line)}
+  .modal h2{margin:0 0 14px;color:var(--pink-dark)}
+  .form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form .full{grid-column:1/-1}
+  label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px}
+  input[type=text],input[type=number],select,textarea{width:100%;border:2px solid var(--line);border-radius:12px;padding:9px 11px;font:inherit;color:var(--ink)}
+  textarea{min-height:70px;resize:vertical}
+  .check{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink);padding-top:22px}
+  .drop{border:3px dashed var(--line);border-radius:18px;background:var(--blush);padding:16px;text-align:center;color:var(--muted);cursor:pointer;display:grid;gap:8px;place-items:center;min-height:180px}
+  .drop.over{border-color:var(--pink);background:#ffeef5}
+  .drop img{max-height:220px;max-width:100%;border-radius:12px}
+  .drop .hint{font-size:13px}
+  .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+  .error{color:var(--bad);font-weight:600;margin-top:8px;min-height:1.2em}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .status{border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800;display:inline-block}
+  .status.new{background:#ffe1ec;color:var(--pink-dark)} .status.paid{background:#fff3d6;color:var(--warn)}
+  .status.shipped{background:#e3f6ed;color:var(--ok)} .status.done{background:#eee;color:#777}
+  .items{font-size:13px;color:var(--muted)} .addr{font-size:13px;white-space:pre-line}
+  .order-actions{display:flex;gap:6px;flex-wrap:wrap}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-weight:600;opacity:0;transition:.2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .empty{padding:40px;text-align:center;color:var(--muted);border:2px dashed var(--line);border-radius:18px}
+  @media (max-width:640px){.form{grid-template-columns:1fr} header{flex-wrap:wrap} .hide-sm{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌸 Pearl &amp; Bloom admin</h1>
+  <nav>
+    <button data-tab="products" class="active">Products</button>
+    <button data-tab="orders">Orders <span id="newCount"></span></button>
+  </nav>
+  <div class="who" id="who"></div>
+</header>
+
+<main>
+  <section id="products">
+    <div class="toolbar">
+      <button class="btn" id="addProduct">+ Add a product</button>
+      <span style="color:var(--muted);font-size:13px">Drag cards to change the order they show in the shop.</span>
+      <a class="btn ghost small" style="margin-left:auto;text-decoration:none" href="https://pearlandbloom.us" target="_blank" rel="noopener">Open the shop ↗</a>
+    </div>
+    <div class="grid" id="productGrid"></div>
+  </section>
+
+  <section id="orders" hidden>
+    <div class="toolbar" id="statusChips">
+      <button class="chip active" data-status="new">New</button>
+      <button class="chip" data-status="paid">Paid</button>
+      <button class="chip" data-status="shipped">Shipped</button>
+      <button class="chip" data-status="done">Done</button>
+      <button class="chip" data-status="">All</button>
+      <button class="btn ghost small" id="refreshOrders" style="margin-left:auto">Refresh</button>
+    </div>
+    <div id="orderList"></div>
+  </section>
+</main>
+
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <h2 id="editTitle">Add a product</h2>
+    <form id="editForm" class="form" novalidate>
+      <input type="hidden" id="f_id">
+      <input type="hidden" id="f_photo">
+      <div class="full">
+        <label>Photo</label>
+        <div class="drop" id="drop">
+          <div id="dropInner"><div style="font-size:36px">📷</div><div><strong>Drag a photo here</strong> or tap to choose one</div><div class="hint">Phone photos are fine — it gets resized automatically.</div></div>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+        </div>
+      </div>
+      <div><label>Name</label><input type="text" id="f_name" required placeholder="Sugar Plum Necklace"></div>
+      <div><label>Price ($)</label><input type="number" id="f_price" min="0" step="0.25" required placeholder="3.00"></div>
+      <div><label>Category</label>
+        <select id="f_category">
+          <option value="bracelets">Bracelets</option><option value="necklaces">Necklaces</option><option value="keychains">Keychains</option>
+          <option value="clay">Clay</option><option value="earrings">Earrings</option><option value="paintings">Paintings</option>
+        </select>
+      </div>
+      <div><label>Search words</label><input type="text" id="f_keywords" placeholder="pink smiley bracelet"></div>
+      <div class="full"><label>Description (optional)</label><textarea id="f_description" placeholder="A short note shoppers will see under the name"></textarea></div>
+      <label class="check"><input type="checkbox" id="f_sold_out"> Sold out (stays in the shop, can't be added to cart)</label>
+      <label class="check"><input type="checkbox" id="f_active" checked> Show in the shop</label>
+      <div class="full error" id="editError"></div>
+      <div class="full actions">
+        <button type="button" class="btn danger" id="deleteProduct" hidden>Delete</button>
+        <span style="flex:1"></span>
+        <button type="button" class="btn ghost" id="cancelEdit">Cancel</button>
+        <button type="submit" class="btn" id="saveProduct">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const api=async(path,opts={})=>{
+  const r=await fetch('api/'+path,{headers:{'content-type':'application/json'},...opts});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(data.error||('Request failed ('+r.status+')'));
+  return data;
+};
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);};
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let SITE='https://pearlandbloom.us';
+const photoUrl=p=>p?(p.startsWith('http')?p:SITE+'/'+p):'';
+
+// ----- tabs
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));
+  $('#products').hidden=b.dataset.tab!=='products'; $('#orders').hidden=b.dataset.tab!=='orders';
+  if(b.dataset.tab==='orders') loadOrders();
+}));
+
+// ----- who
+api('whoami').then(w=>{SITE=w.site||SITE;$('#who').textContent=w.name?`Hi ${w.name.split(' ')[0]}! · ${w.login}`:'';}).catch(()=>{});
+
+// ----- products
+let products=[];
+async function loadProducts(){
+  products=await api('products');
+  const g=$('#productGrid');
+  if(!products.length){g.innerHTML='<div class="empty">No products yet — add the first one!</div>';return;}
+  g.innerHTML=products.map(p=>`
+    <div class="card" draggable="true" data-id="${p.id}">
+      <div class="flags">${p.active?'':'<span class="flag hidden">Hidden</span>'}${p.sold_out?'<span class="flag sold">Sold out</span>':''}</div>
+      ${p.photo?`<img src="${esc(photoUrl(p.photo))}" alt="">`:'<div class="nophoto">🌸</div>'}
+      <div class="body">
+        <h3>${esc(p.name)}</h3>
+        <div class="price">$${Number(p.price).toFixed(2)}</div>
+        <div class="meta">${esc(p.category)}</div>
+        <div class="actions">
+          <button class="btn small" data-edit="${p.id}">Edit</button>
+          <button class="btn ghost small" data-toggle-sold="${p.id}">${p.sold_out?'Back in stock':'Sold out'}</button>
+        </div>
+      </div>
+    </div>`).join('');
+  wireDrag();
+}
+$('#productGrid').addEventListener('click',async e=>{
+  const ed=e.target.closest('[data-edit]'); if(ed){openEdit(products.find(p=>p.id==ed.dataset.edit));return;}
+  const ts=e.target.closest('[data-toggle-sold]');
+  if(ts){const p=products.find(x=>x.id==ts.dataset.toggleSold);
+    try{await api('products/'+p.id,{method:'PUT',body:JSON.stringify({sold_out:!p.sold_out})});toast(p.sold_out?'Back in stock':'Marked sold out');loadProducts();}
+    catch(err){toast(err.message);} }
+});
+
+// drag to reorder
+function wireDrag(){
+  let dragging=null;
+  document.querySelectorAll('#productGrid .card').forEach(card=>{
+    card.addEventListener('dragstart',()=>{dragging=card;card.classList.add('dragging');});
+    card.addEventListener('dragend',()=>{card.classList.remove('dragging');dragging=null;});
+    card.addEventListener('dragover',e=>{e.preventDefault();card.classList.add('over');});
+    card.addEventListener('dragleave',()=>card.classList.remove('over'));
+    card.addEventListener('drop',async e=>{
+      e.preventDefault();card.classList.remove('over');
+      if(!dragging||dragging===card) return;
+      const g=$('#productGrid');const cards=[...g.children];
+      const from=cards.indexOf(dragging),to=cards.indexOf(card);
+      g.insertBefore(dragging,from<to?card.nextSibling:card);
+      const ids=[...g.children].map(c=>Number(c.dataset.id));
+      try{await api('products/reorder',{method:'POST',body:JSON.stringify({ids})});toast('Order saved');}
+      catch(err){toast(err.message);loadProducts();}
+    });
+  });
+}
+
+// ----- edit modal
+const ov=$('#editOverlay');
+function setPhotoPreview(path){
+  $('#f_photo').value=path||'';
+  $('#dropInner').innerHTML=path?`<img src="${esc(photoUrl(path))}" alt=""><div class="hint">Drop a new photo to replace it</div>`
+    :'<div style="font-size:36px">📷</div><div><strong>Drag a photo here</strong> or tap to choose one</div><div class="hint">Phone photos are fine — it gets resized automatically.</div>';
+}
+function openEdit(p){
+  $('#editTitle').textContent=p?'Edit product':'Add a product';
+  $('#f_id').value=p?p.id:''; $('#f_name').value=p?p.name:''; $('#f_price').value=p?p.price:'';
+  $('#f_category').value=p?p.category:'bracelets'; $('#f_keywords').value=p?p.keywords:''; $('#f_description').value=p?p.description:'';
+  $('#f_sold_out').checked=!!(p&&p.sold_out); $('#f_active').checked=p?!!p.active:true;
+  $('#deleteProduct').hidden=!p; $('#editError').textContent=''; setPhotoPreview(p?p.photo:'');
+  ov.classList.add('open'); $('#f_name').focus();
+}
+$('#addProduct').addEventListener('click',()=>openEdit(null));
+$('#cancelEdit').addEventListener('click',()=>ov.classList.remove('open'));
+ov.addEventListener('click',e=>{if(e.target===ov) ov.classList.remove('open');});
+$('#editForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const body={name:$('#f_name').value.trim(),price:Number($('#f_price').value),category:$('#f_category').value,
+    keywords:$('#f_keywords').value.trim(),description:$('#f_description').value.trim(),photo:$('#f_photo').value,
+    sold_out:$('#f_sold_out').checked,active:$('#f_active').checked};
+  if(!body.name){$('#editError').textContent='Give it a name.';return;}
+  if(!(body.price>=0)){$('#editError').textContent='Enter a price.';return;}
+  const id=$('#f_id').value; $('#saveProduct').disabled=true;
+  try{ await api(id?'products/'+id:'products',{method:id?'PUT':'POST',body:JSON.stringify(body)});
+    ov.classList.remove('open'); toast(id?'Saved':'Added to the shop'); loadProducts(); }
+  catch(err){$('#editError').textContent=err.message;}
+  finally{$('#saveProduct').disabled=false;}
+});
+$('#deleteProduct').addEventListener('click',async()=>{
+  const id=$('#f_id').value; if(!confirm('Delete "'+$('#f_name').value+'" from the shop? This cannot be undone.')) return;
+  try{await api('products/'+id,{method:'DELETE'});ov.classList.remove('open');toast('Deleted');loadProducts();}
+  catch(err){$('#editError').textContent=err.message;}
+});
+
+// photo drop zone
+const drop=$('#drop'),fileInput=$('#fileInput');
+drop.addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',()=>{if(fileInput.files[0]) uploadPhoto(fileInput.files[0]);fileInput.value='';});
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0]; if(f) uploadPhoto(f);});
+async function uploadPhoto(file){
+  if(!file.type.startsWith('image/')){$('#editError').textContent='That is not a photo.';return;}
+  $('#dropInner').innerHTML='<div>Uploading… ⏳</div>'; $('#editError').textContent='';
+  const fd=new FormData(); fd.append('photo',file); fd.append('name',$('#f_name').value||file.name);
+  try{
+    const r=await fetch('api/upload',{method:'POST',body:fd}); const data=await r.json();
+    if(!r.ok) throw new Error(data.error||'Upload failed');
+    setPhotoPreview(data.photo); toast('Photo uploaded');
+  }catch(err){$('#editError').textContent=err.message;setPhotoPreview($('#f_photo').value);}
+}
+
+// ----- orders
+let orderStatus='new';
+$('#statusChips').addEventListener('click',e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===c));
+  orderStatus=c.dataset.status; loadOrders();
+});
+$('#refreshOrders').addEventListener('click',loadOrders);
+async function loadOrders(){
+  const list=$('#orderList'); list.innerHTML='<div class="empty">Loading…</div>';
+  let orders; try{orders=await api('orders'+(orderStatus?'?status='+orderStatus:''));}catch(err){list.innerHTML='<div class="empty">'+esc(err.message)+'</div>';return;}
+  if(orderStatus==='new') $('#newCount').textContent=orders.length?`(${orders.length})`:'';
+  if(!orders.length){list.innerHTML='<div class="empty">Nothing here right now.</div>';return;}
+  const next={new:'paid',paid:'shipped',shipped:'done'};
+  const label={paid:'Mark paid',shipped:'Mark shipped',done:'Mark done'};
+  list.innerHTML=`<table><thead><tr><th>Order</th><th>Customer</th><th class="hide-sm">Items</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>${orders.map(o=>`
+    <tr>
+      <td><strong>${esc(o.number)}</strong><br><span class="items">${new Date(o.created_at).toLocaleDateString()}</span></td>
+      <td>${esc(o.customer)}<br><span class="items">${esc(o.email)}${o.phone?' · '+esc(o.phone):''}</span><div class="addr">${esc(o.address)}\n${esc(o.city)}, ${esc(o.state)} ${esc(o.zip)}</div>${o.notes?`<div class="items">📝 ${esc(o.notes)}</div>`:''}</td>
+      <td class="hide-sm items">${o.items.map(i=>esc(i.name)+' — $'+Number(i.price).toFixed(2)).join('<br>')}<br><em>${esc(o.shipping_method||'')}${o.shipping_cost?' +$'+Number(o.shipping_cost).toFixed(2):''}</em></td>
+      <td><strong>$${Number(o.total).toFixed(2)}</strong></td>
+      <td><span class="status ${esc(o.status)}">${esc(o.status)}</span></td>
+      <td><div class="order-actions">
+        ${next[o.status]?`<button class="btn small" data-status="${next[o.status]}" data-number="${esc(o.number)}">${label[next[o.status]]}</button>`:''}
+        ${o.status!=='new'?`<button class="btn ghost small" data-status="new" data-number="${esc(o.number)}">Back to new</button>`:''}
+        <button class="btn danger small" data-delete="${esc(o.number)}">Delete</button>
+      </div></td>
+    </tr>`).join('')}</tbody></table>
+    <p class="items" style="margin-top:10px">Marking <strong>paid</strong> or <strong>shipped</strong> emails the customer automatically.</p>`;
+}
+$('#orderList').addEventListener('click',async e=>{
+  const st=e.target.closest('[data-status]');
+  if(st){const s=st.dataset.status,n=st.dataset.number; st.disabled=true;
+    try{const r=await api('orders/'+n,{method:'PUT',body:JSON.stringify({status:s,notify:true})});toast(`${n} → ${s}${r.emailed?' (customer emailed)':''}`);loadOrders();}
+    catch(err){toast(err.message);st.disabled=false;} return;}
+  const del=e.target.closest('[data-delete]');
+  if(del){const n=del.dataset.delete; if(!confirm('Delete order '+n+'? Only do this for test orders.')) return;
+    try{await api('orders/'+n,{method:'DELETE'});toast('Deleted '+n);loadOrders();}catch(err){toast(err.message);} }
+});
+
+loadProducts();
+api('orders?status=new').then(o=>{$('#newCount').textContent=o.length?`(${o.length})`:'';}).catch(()=>{});
+</script>
+</body>
+</html>

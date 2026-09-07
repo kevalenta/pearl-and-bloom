@@ -33,13 +33,51 @@ function renderCart(){
 }
 window.removeItem=i=>{cart.splice(i,1);renderCart();};
 
-document.querySelectorAll('.add-btn[data-product]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    cart.push({name:btn.dataset.product,price:Number(btn.dataset.price)});
-    renderCart();
-    openCart();
+// ---- Products: loaded from the shop database (managed on the admin page) ----
+function escapeHtml(t){return String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function productCard(p){
+  const photo=p.photo?`<img src="${escapeHtml(p.photo)}" alt="${escapeHtml(p.name)}" loading="lazy">`:'<div class="no-photo">🌸</div>';
+  const soldOut=p.sold_out?'<span class="product-badge sold-out">Sold out</span>':'';
+  const btn=p.sold_out
+    ?`<button class="add-btn" disabled>Sold out</button>`
+    :`<button class="add-btn" data-product="${escapeHtml(p.name)}" data-price="${Number(p.price).toFixed(2)}">🛒 Add to Cart</button>`;
+  const desc=p.description?`<p class="product-desc">${escapeHtml(p.description)}</p>`:'';
+  return `<article class="product-card" data-category="${escapeHtml(p.category)}" data-name="${escapeHtml((p.name+' '+(p.keywords||'')).toLowerCase())}">
+    <div class="product-photo real-photo">${soldOut}<button class="fav-btn" aria-label="Favorite">♡</button>${photo}</div>
+    <div class="product-body"><h3>${escapeHtml(p.name)}</h3>${desc}<p class="product-price">$${Number(p.price).toFixed(2)}</p>${btn}</div>
+  </article>`;
+}
+function wireProductButtons(){
+  document.querySelectorAll('.add-btn[data-product]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      cart.push({name:btn.dataset.product,price:Number(btn.dataset.price)});
+      renderCart();
+      openCart();
+    });
   });
-});
+  document.querySelectorAll('.fav-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.classList.toggle('saved');
+      btn.textContent=btn.classList.contains('saved')?'♥':'♡';
+    });
+  });
+}
+async function loadProducts(){
+  const grid=document.getElementById('productGrid');
+  if(!grid) return;
+  try{
+    const res=await fetch('/api/products');
+    const products=await res.json();
+    grid.innerHTML=products.length?products.map(productCard).join(''):'<p class="grid-note">New goodies coming soon! ♡</p>';
+  }catch(err){
+    grid.innerHTML='<p class="grid-note">Could not load the shop right now. Please refresh.</p>';
+  }
+  wireProductButtons();
+  // re-apply whatever filter/search is active
+  const active=document.querySelector('.filter.active');
+  if(active && active.dataset.filter!=='all') active.click();
+}
+loadProducts();
 
 const customForm=document.getElementById('customForm');
 if(customForm){
@@ -92,12 +130,6 @@ document.querySelectorAll('.filter').forEach(btn=>{
 
 renderCart();
 
-document.querySelectorAll('.fav-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    btn.classList.toggle('saved');
-    btn.textContent=btn.classList.contains('saved')?'♥':'♡';
-  });
-});
 const selectedColors=[];
 document.querySelectorAll('.color-dot').forEach(dot=>{
   dot.addEventListener('click',()=>{
@@ -152,7 +184,7 @@ document.querySelectorAll('.charm-btn').forEach(btn=>{
  const SHIPPING={
    local:{label:'Free local delivery (Palmas Del Mar)',price:0},
    first:{label:'First Class Mail (not trackable)',price:2},
-   ground:{label:'USPS Ground Advantage (trackable)',price:8.5}
+   ground:{label:'USPS Ground Advantage (trackable)',price:7}
  };
  const shippingInputs=document.querySelectorAll('#shippingChoices input[name="shipping"]');
 

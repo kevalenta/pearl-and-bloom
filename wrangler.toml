@@ -15,9 +15,16 @@ binding = "DB"
 database_name = "pearl-and-bloom"
 database_id = "935a5419-243a-4340-b84c-9c654b322a0b"
 
+# Product photos uploaded from the admin page (Cloudflare R2, free tier).
+# Create the bucket once in the dashboard: R2 → Create bucket → "pearl-and-bloom-photos".
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "pearl-and-bloom-photos"
+
 # Email is sent through Microsoft 365 (Graph API) as orders@pearlandbloom.us.
 # Secrets (set in the Cloudflare dashboard → Worker → Settings → Variables, never in git):
-#   MS_TENANT_ID, MS_CLIENT_ID, MS_CLIENT_SECRET
+#   MS_CLIENT_SECRET   (Microsoft Graph app secret)
+#   ADMIN_TOKEN        (long random string; the admin app on the pearlbloom VM sends it)
 [vars]
 SHOP_FROM = "orders@pearlandbloom.us"
 SHOP_NAME = "Pearl & Bloom"
