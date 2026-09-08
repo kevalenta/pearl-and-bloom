@@ -61,6 +61,23 @@
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-weight:600;opacity:0;transition:.2s;pointer-events:none}
   .toast.show{opacity:1}
   .empty{padding:40px;text-align:center;color:var(--muted);border:2px dashed var(--line);border-radius:18px}
+  .stock{font-size:12px;font-weight:700;color:var(--ok)} .stock.low{color:var(--warn)} .stock.none{color:var(--bad)}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+  .tile{border:2px solid var(--line);border-radius:18px;background:#fff;padding:14px;display:grid;gap:10px}
+  .tile .head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .tile .num{font-weight:800;font-size:16px} .tile .date{font-size:12px;color:var(--muted)}
+  .tile .who{font-weight:700} .tile .addr{white-space:pre-line;font-size:13px;color:var(--ink)}
+  .tile .contact{font-size:12px;color:var(--muted)}
+  .tile .ship{font-size:13px;background:var(--blush);border-radius:10px;padding:6px 10px}
+  .line{display:flex;align-items:center;gap:10px;border-top:1px dashed var(--line);padding-top:8px}
+  .line img,.line .noimg{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--blush);flex:none;display:grid;place-items:center}
+  .line .nm{font-weight:700} .line .qty{color:var(--muted);font-size:13px}
+  .tile .note{font-size:13px;background:#fff3d6;border-radius:10px;padding:6px 10px}
+  .tile .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .tile .total{font-weight:800;font-size:16px;color:var(--pink-dark)}
+  .track{font-size:12px;color:var(--muted)} .track a{color:var(--pink-dark)}
+  .card .del{position:absolute;top:8px;right:8px;background:#fff;border:0;border-radius:999px;width:28px;height:28px;cursor:pointer;color:var(--bad);font-weight:800;display:none}
+  .card:hover .del{display:block}
   @media (max-width:640px){.form{grid-template-columns:1fr} header{flex-wrap:wrap} .hide-sm{display:none}}
 </style>
 </head>
@@ -119,6 +136,8 @@
         </select>
       </div>
       <div><label>Search words</label><input type="text" id="f_keywords" placeholder="pink smiley bracelet"></div>
+      <div><label>How many do you have?</label><input type="number" id="f_stock" min="0" step="1" placeholder="leave blank = made to order"></div>
+      <div><label>&nbsp;</label><div class="hint" style="font-size:12px;color:var(--muted)">Each order lowers this. At 0 it shows Sold out automatically.</div></div>
       <div class="full"><label>Description (optional)</label><textarea id="f_description" placeholder="A short note shoppers will see under the name"></textarea></div>
       <label class="check"><input type="checkbox" id="f_sold_out"> Sold out (stays in the shop, can't be added to cart)</label>
       <label class="check"><input type="checkbox" id="f_active" checked> Show in the shop</label>
@@ -129,6 +148,19 @@
         <button type="button" class="btn ghost" id="cancelEdit">Cancel</button>
         <button type="submit" class="btn" id="saveProduct">Save</button>
       </div>
+    </form>
+  </div>
+</div>
+
+<div class="overlay" id="shipOverlay">
+  <div class="modal" style="width:min(420px,100%)">
+    <h2 id="shipTitle">Mark shipped</h2>
+    <form id="shipForm" class="form" novalidate>
+      <input type="hidden" id="s_number">
+      <div class="full"><label id="s_dateLabel">Date shipped</label><input type="date" id="s_date"></div>
+      <div class="full" id="s_trackWrap"><label>Tracking number (from the USPS receipt)</label><input type="text" id="s_tracking" placeholder="9400 1000 0000 0000 0000 00" autocomplete="off"></div>
+      <div class="full error" id="shipError"></div>
+      <div class="full actions"><button type="button" class="btn ghost" id="cancelShip">Cancel</button><button type="submit" class="btn" id="saveShip">Save &amp; email customer</button></div>
     </form>
   </div>
 </div>
@@ -160,6 +192,11 @@ api('whoami').then(w=>{SITE=w.site||SITE;$('#who').textContent=w.name?`Hi ${w.na
 
 // ----- products
 let products=[];
+function stockLabel(p){
+  if(p.stock===null||p.stock===undefined) return '<span class="stock">made to order</span>';
+  if(p.stock<=0) return '<span class="stock none">0 left</span>';
+  return `<span class="stock ${p.stock<=3?'low':''}">${p.stock} left</span>`;
+}
 async function loadProducts(){
   products=await api('products');
   const g=$('#productGrid');
@@ -167,11 +204,12 @@ async function loadProducts(){
   g.innerHTML=products.map(p=>`
     <div class="card" draggable="true" data-id="${p.id}">
       <div class="flags">${p.active?'':'<span class="flag hidden">Hidden</span>'}${p.sold_out?'<span class="flag sold">Sold out</span>':''}</div>
+      <button class="del" title="Delete" data-del="${p.id}">✕</button>
       ${p.photo?`<img src="${esc(photoUrl(p.photo))}" alt="">`:'<div class="nophoto">🌸</div>'}
       <div class="body">
         <h3>${esc(p.name)}</h3>
         <div class="price">$${Number(p.price).toFixed(2)}</div>
-        <div class="meta">${esc(p.category)}</div>
+        <div class="meta">${esc(p.category)} · ${stockLabel(p)}</div>
         <div class="actions">
           <button class="btn small" data-edit="${p.id}">Edit</button>
           <button class="btn ghost small" data-toggle-sold="${p.id}">${p.sold_out?'Back in stock':'Sold out'}</button>
@@ -181,6 +219,9 @@ async function loadProducts(){
   wireDrag();
 }
 $('#productGrid').addEventListener('click',async e=>{
+  const dl=e.target.closest('[data-del]');
+  if(dl){const p=products.find(x=>x.id==dl.dataset.del); if(!confirm('Delete "'+p.name+'" from the shop? This cannot be undone.')) return;
+    try{await api('products/'+p.id,{method:'DELETE'});toast('Deleted');loadProducts();}catch(err){toast(err.message);} return;}
   const ed=e.target.closest('[data-edit]'); if(ed){openEdit(products.find(p=>p.id==ed.dataset.edit));return;}
   const ts=e.target.closest('[data-toggle-sold]');
   if(ts){const p=products.find(x=>x.id==ts.dataset.toggleSold);
@@ -220,6 +261,7 @@ function openEdit(p){
   $('#editTitle').textContent=p?'Edit product':'Add a product';
   $('#f_id').value=p?p.id:''; $('#f_name').value=p?p.name:''; $('#f_price').value=p?p.price:'';
   $('#f_category').value=p?p.category:'bracelets'; $('#f_keywords').value=p?p.keywords:''; $('#f_description').value=p?p.description:'';
+  $('#f_stock').value=(p&&p.stock!==null&&p.stock!==undefined)?p.stock:'';
   $('#f_sold_out').checked=!!(p&&p.sold_out); $('#f_active').checked=p?!!p.active:true;
   $('#deleteProduct').hidden=!p; $('#editError').textContent=''; setPhotoPreview(p?p.photo:'');
   ov.classList.add('open'); $('#f_name').focus();
@@ -231,7 +273,8 @@ $('#editForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const body={name:$('#f_name').value.trim(),price:Number($('#f_price').value),category:$('#f_category').value,
     keywords:$('#f_keywords').value.trim(),description:$('#f_description').value.trim(),photo:$('#f_photo').value,
-    sold_out:$('#f_sold_out').checked,active:$('#f_active').checked};
+    sold_out:$('#f_sold_out').checked,active:$('#f_active').checked,
+    stock:$('#f_stock').value.trim()===''?null:Number($('#f_stock').value)};
   if(!body.name){$('#editError').textContent='Give it a name.';return;}
   if(!(body.price>=0)){$('#editError').textContent='Enter a price.';return;}
   const id=$('#f_id').value; $('#saveProduct').disabled=true;
@@ -279,29 +322,56 @@ async function loadOrders(){
   if(!orders.length){list.innerHTML='<div class="empty">Nothing here right now.</div>';return;}
   const next={new:'paid',paid:'shipped',shipped:'done'};
   const label={paid:'Mark paid',shipped:'Mark shipped',done:'Mark done'};
-  list.innerHTML=`<table><thead><tr><th>Order</th><th>Customer</th><th class="hide-sm">Items</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>${orders.map(o=>`
-    <tr>
-      <td><strong>${esc(o.number)}</strong><br><span class="items">${new Date(o.created_at).toLocaleDateString()}</span></td>
-      <td>${esc(o.customer)}<br><span class="items">${esc(o.email)}${o.phone?' · '+esc(o.phone):''}</span><div class="addr">${esc(o.address)}\n${esc(o.city)}, ${esc(o.state)} ${esc(o.zip)}</div>${o.notes?`<div class="items">📝 ${esc(o.notes)}</div>`:''}</td>
-      <td class="hide-sm items">${o.items.map(i=>esc(i.name)+' — $'+Number(i.price).toFixed(2)).join('<br>')}<br><em>${esc(o.shipping_method||'')}${o.shipping_cost?' +$'+Number(o.shipping_cost).toFixed(2):''}</em></td>
-      <td><strong>$${Number(o.total).toFixed(2)}</strong></td>
-      <td><span class="status ${esc(o.status)}">${esc(o.status)}</span></td>
-      <td><div class="order-actions">
-        ${next[o.status]?`<button class="btn small" data-status="${next[o.status]}" data-number="${esc(o.number)}">${label[next[o.status]]}</button>`:''}
+  list.innerHTML='<div class="tiles">'+orders.map(o=>{
+    const local=/local/i.test(o.shipping_method||'');
+    const counts={}; o.items.forEach(i=>{const k=i.name; counts[k]=counts[k]||{...i,qty:0}; counts[k].qty++;});
+    const lines=Object.values(counts).map(i=>`<div class="line">${i.photo?`<img src="${esc(photoUrl(i.photo))}" alt="">`:'<div class="noimg">🌸</div>'}<div><div class="nm">${esc(i.name)}</div><div class="qty">${i.qty>1?i.qty+' × ':''}$${Number(i.price).toFixed(2)}</div></div></div>`).join('');
+    const shipBtn=next[o.status]?`<button class="btn small" data-status="${next[o.status]}" data-number="${esc(o.number)}" data-local="${local?1:0}" data-method="${esc(o.shipping_method||'')}">${o.status==='paid'&&local?'Mark delivered':label[next[o.status]]}</button>`:'';
+    const trackLine=o.tracking?`<div class="track">Tracking <a href="https://tools.usps.com/go/TrackConfirmAction?tLabels=${encodeURIComponent(o.tracking)}" target="_blank" rel="noopener">${esc(o.tracking)}</a>${o.shipped_at?' · shipped '+esc(o.shipped_at):''}</div>`:(o.shipped_at?`<div class="track">${local?'Delivered':'Shipped'} ${esc(o.shipped_at)}</div>`:'');
+    return `<div class="tile">
+      <div class="head"><span class="num">${esc(o.number)}</span><span class="status ${esc(o.status)}">${esc(o.status)}</span><span class="date">${new Date(o.created_at).toLocaleDateString()}</span></div>
+      <div><div class="who">${esc(o.customer)}</div><div class="addr">${esc(o.address)}\n${esc(o.city)}, ${esc(o.state)} ${esc(o.zip)}</div><div class="contact">${esc(o.email)}${o.phone?' · '+esc(o.phone):''}</div></div>
+      <div class="ship">${local?'🚲':'📦'} ${esc(o.shipping_method||'')}${o.shipping_cost?' · $'+Number(o.shipping_cost).toFixed(2):''}</div>
+      ${lines}
+      ${o.notes?`<div class="note">📝 ${esc(o.notes)}</div>`:''}
+      ${trackLine}
+      <div class="foot"><span class="total">$${Number(o.total).toFixed(2)}</span><div class="order-actions">${shipBtn}
         ${o.status!=='new'?`<button class="btn ghost small" data-status="new" data-number="${esc(o.number)}">Back to new</button>`:''}
-        <button class="btn danger small" data-delete="${esc(o.number)}">Delete</button>
-      </div></td>
-    </tr>`).join('')}</tbody></table>
-    <p class="items" style="margin-top:10px">Marking <strong>paid</strong> or <strong>shipped</strong> emails the customer automatically.</p>`;
+        <button class="btn danger small" data-delete="${esc(o.number)}">Delete</button></div></div>
+    </div>`;}).join('')+'</div><p class="items" style="margin-top:10px">Marking <strong>paid</strong> or <strong>shipped/delivered</strong> emails the customer automatically.</p>';
 }
 $('#orderList').addEventListener('click',async e=>{
   const st=e.target.closest('[data-status]');
-  if(st){const s=st.dataset.status,n=st.dataset.number; st.disabled=true;
+  if(st){const s=st.dataset.status,n=st.dataset.number;
+    if(s==='shipped'){openShip(n,st.dataset.local==='1',st.dataset.method);return;}
+    st.disabled=true;
     try{const r=await api('orders/'+n,{method:'PUT',body:JSON.stringify({status:s,notify:true})});toast(`${n} → ${s}${r.emailed?' (customer emailed)':''}`);loadOrders();}
     catch(err){toast(err.message);st.disabled=false;} return;}
   const del=e.target.closest('[data-delete]');
   if(del){const n=del.dataset.delete; if(!confirm('Delete order '+n+'? Only do this for test orders.')) return;
     try{await api('orders/'+n,{method:'DELETE'});toast('Deleted '+n);loadOrders();}catch(err){toast(err.message);} }
+});
+
+// ship / deliver dialog
+const shipOv=$('#shipOverlay');
+function openShip(number,local,method){
+  $('#s_number').value=number; $('#s_date').value=new Date().toISOString().slice(0,10); $('#s_tracking').value=''; $('#shipError').textContent='';
+  $('#shipTitle').textContent=local?'Mark delivered':'Mark shipped';
+  $('#s_dateLabel').textContent=local?'Date delivered':'Date shipped';
+  const trackable=/track/i.test(method)&&!/not trackable/i.test(method);
+  $('#s_trackWrap').hidden=local||!trackable;
+  shipOv.classList.add('open');
+}
+$('#cancelShip').addEventListener('click',()=>shipOv.classList.remove('open'));
+shipOv.addEventListener('click',e=>{if(e.target===shipOv) shipOv.classList.remove('open');});
+$('#shipForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const n=$('#s_number').value, body={status:'shipped',notify:true,shipped_at:$('#s_date').value,tracking:$('#s_trackWrap').hidden?'':$('#s_tracking').value.trim()};
+  if(!body.shipped_at){$('#shipError').textContent='Pick a date.';return;}
+  $('#saveShip').disabled=true;
+  try{const r=await api('orders/'+n,{method:'PUT',body:JSON.stringify(body)});shipOv.classList.remove('open');toast(`${n} shipped${r.emailed?' — customer emailed':''}`);loadOrders();}
+  catch(err){$('#shipError').textContent=err.message;}
+  finally{$('#saveShip').disabled=false;}
 });
 
 loadProducts();

@@ -18,7 +18,7 @@
 //   PUT    /api/admin/photos/<key>       body = image bytes → saved in R2, returns {photo:"photos/<key>"}
 //   DELETE /api/admin/photos/<key>
 //   GET    /api/admin/orders?status=new  list orders (status optional)
-//   PUT    /api/admin/orders/:number     {status:"paid"|"shipped"|"done"|"new", notify:true} → emails the customer when notify
+//   PUT    /api/admin/orders/:number     {status, notify:true, shipped_at:"2026-09-08", tracking:"9400..."} → emails the customer when notify
 //   DELETE /api/admin/orders/:number
 
 import { json, sendStatusEmail } from "./index.js";
@@ -30,7 +30,7 @@ const STATUSES = ["new", "paid", "shipped", "done"];
 
 export async function listProducts(env) {
   const { results } = await env.DB.prepare(
-    "SELECT id, name, category, price, keywords, description, photo, sold_out FROM products WHERE active = 1 ORDER BY sort, id"
+    "SELECT id, name, category, price, keywords, description, photo, sold_out, stock FROM products WHERE active = 1 ORDER BY sort, id"
   ).all();
   return json(results, 200, { "cache-control": "no-store" });
 }
@@ -116,6 +116,9 @@ async function migrate(env) {
     photo TEXT NOT NULL DEFAULT '', active INTEGER NOT NULL DEFAULT 1, sold_out INTEGER NOT NULL DEFAULT 0,
     sort INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')))`);
   await run("products_sort", "CREATE INDEX IF NOT EXISTS products_sort ON products (active, sort)");
+  await run("products.stock", "ALTER TABLE products ADD COLUMN stock INTEGER"); // NULL = made to order
+  await run("orders.shipped_at", "ALTER TABLE orders ADD COLUMN shipped_at TEXT");
+  await run("orders.tracking", "ALTER TABLE orders ADD COLUMN tracking TEXT");
 
   const count = (await env.DB.prepare("SELECT COUNT(*) AS n FROM products").first()).n;
   if (count === 0 && Array.isArray(SEED)) {
@@ -145,6 +148,12 @@ function cleanProduct(body, partial = false) {
   if (!partial || body.active !== undefined) out.active = body.active === false || body.active === 0 ? 0 : 1;
   if (!partial || body.sold_out !== undefined) out.sold_out = body.sold_out === true || body.sold_out === 1 ? 1 : 0;
   if (!partial || body.sort !== undefined) out.sort = Number(body.sort) || 0;
+  if (!partial || body.stock !== undefined) {
+    // "" or null = made to order (no limit); otherwise a whole number >= 0
+    out.stock = body.stock === null || body.stock === "" || body.stock === undefined ? null : Math.max(0, Math.floor(Number(body.stock)) || 0);
+    if (out.stock === 0) out.sold_out = 1;                       // none left → sold out
+    else if (out.stock !== null && body.sold_out === undefined) out.sold_out = 0; // restocked → back on sale
+  }
   return out;
 }
 
@@ -156,8 +165,8 @@ async function createProduct(body, env) {
     p.sort = (last?.m || 0) + 10;
   }
   const r = await env.DB.prepare(
-    "INSERT INTO products (name, category, price, keywords, description, photo, active, sold_out, sort) VALUES (?,?,?,?,?,?,?,?,?)"
-  ).bind(p.name, p.category, p.price, p.keywords, p.description, p.photo, p.active, p.sold_out, p.sort).run();
+    "INSERT INTO products (name, category, price, keywords, description, photo, active, sold_out, sort, stock) VALUES (?,?,?,?,?,?,?,?,?,?)"
+  ).bind(p.name, p.category, p.price, p.keywords, p.description, p.photo, p.active, p.sold_out, p.sort, p.stock).run();
   const row = await env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(r.meta.last_row_id).first();
   return json(row, 201);
 }
@@ -214,7 +223,13 @@ async function listOrders(url, env) {
     ? env.DB.prepare("SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC").bind(status)
     : env.DB.prepare("SELECT * FROM orders ORDER BY created_at DESC LIMIT 500");
   const { results } = await q.all();
-  return json(results.map((o) => ({ ...o, items: JSON.parse(o.items_json || "[]"), items_json: undefined })));
+  // Attach each item's product photo so the packing view shows a picture, not just a name.
+  const photos = new Map((await env.DB.prepare("SELECT name, photo FROM products").all()).results.map((p) => [p.name, p.photo]));
+  return json(results.map((o) => ({
+    ...o,
+    items: JSON.parse(o.items_json || "[]").map((it) => ({ ...it, photo: photos.get(it.name) || "" })),
+    items_json: undefined,
+  })));
 }
 
 async function updateOrder(number, body, env) {
@@ -222,13 +237,15 @@ async function updateOrder(number, body, env) {
   if (!STATUSES.includes(status)) return json({ error: "Status must be one of " + STATUSES.join(", ") }, 400);
   const order = await env.DB.prepare("SELECT * FROM orders WHERE number = ?").bind(number).first();
   if (!order) return json({ error: "No such order" }, 404);
-  await env.DB.prepare("UPDATE orders SET status = ? WHERE number = ?").bind(status, number).run();
+  const shippedAt = body.shipped_at !== undefined ? String(body.shipped_at || "").slice(0, 20) : order.shipped_at;
+  const tracking = body.tracking !== undefined ? String(body.tracking || "").replace(/\s+/g, "").slice(0, 40) : order.tracking;
+  await env.DB.prepare("UPDATE orders SET status = ?, shipped_at = ?, tracking = ? WHERE number = ?").bind(status, shippedAt, tracking, number).run();
   let emailed = false;
   if (body.notify && (status === "paid" || status === "shipped")) {
-    try { await sendStatusEmail(env, { ...order, items: JSON.parse(order.items_json || "[]") }, status); emailed = true; }
+    try { await sendStatusEmail(env, { ...order, shipped_at: shippedAt, tracking, items: JSON.parse(order.items_json || "[]") }, status); emailed = true; }
     catch (err) { console.log("status email failed", String(err)); }
   }
-  return json({ ok: true, number, status, emailed });
+  return json({ ok: true, number, status, shipped_at: shippedAt, tracking, emailed });
 }
 
 async function deleteOrder(number, env) {

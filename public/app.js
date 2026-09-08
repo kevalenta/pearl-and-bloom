@@ -37,10 +37,11 @@ window.removeItem=i=>{cart.splice(i,1);renderCart();};
 function escapeHtml(t){return String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function productCard(p){
   const photo=p.photo?`<img src="${escapeHtml(p.photo)}" alt="${escapeHtml(p.name)}" loading="lazy">`:'<div class="no-photo">🌸</div>';
-  const soldOut=p.sold_out?'<span class="product-badge sold-out">Sold out</span>':'';
+  const low=!p.sold_out && p.stock!==null && p.stock!==undefined && p.stock<=3;
+  const soldOut=p.sold_out?'<span class="product-badge sold-out">Sold out</span>':(low?`<span class="product-badge low">Only ${p.stock} left</span>`:'');
   const btn=p.sold_out
     ?`<button class="add-btn" disabled>Sold out</button>`
-    :`<button class="add-btn" data-product="${escapeHtml(p.name)}" data-price="${Number(p.price).toFixed(2)}">🛒 Add to Cart</button>`;
+    :`<button class="add-btn" data-product="${escapeHtml(p.name)}" data-price="${Number(p.price).toFixed(2)}" data-stock="${p.stock??''}">🛒 Add to Cart</button>`;
   const desc=p.description?`<p class="product-desc">${escapeHtml(p.description)}</p>`:'';
   return `<article class="product-card" data-category="${escapeHtml(p.category)}" data-name="${escapeHtml((p.name+' '+(p.keywords||'')).toLowerCase())}">
     <div class="product-photo real-photo">${soldOut}<button class="fav-btn" aria-label="Favorite">♡</button>${photo}</div>
@@ -50,7 +51,14 @@ function productCard(p){
 function wireProductButtons(){
   document.querySelectorAll('.add-btn[data-product]').forEach(btn=>{
     btn.addEventListener('click',()=>{
-      cart.push({name:btn.dataset.product,price:Number(btn.dataset.price)});
+      const name=btn.dataset.product;
+      const stock=btn.dataset.stock===''?null:Number(btn.dataset.stock);
+      const inCart=cart.filter(x=>x.name===name).length;
+      if(stock!==null && inCart>=stock){
+        alert(stock===0?`Sorry, ${name} is sold out. 🌸`:`Only ${stock} of ${name} left, and you already have ${inCart} in your cart. 🌸`);
+        return;
+      }
+      cart.push({name,price:Number(btn.dataset.price)});
       renderCart();
       openCart();
     });
@@ -254,7 +262,7 @@ document.querySelectorAll('.charm-btn').forEach(btn=>{
      try{
        const res=await fetch('/api/order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(order)});
        const data=await res.json();
-       if(!res.ok||!data.ok) throw new Error(data.error||'Something went wrong.');
+       if(!res.ok||!data.ok){ if(data.stock) loadProducts(); throw new Error(data.error||'Something went wrong.'); }
        showConfirmation(data.number,data.total);
        checkoutForm.reset();
        renderSummary();

@@ -11,6 +11,7 @@
 import express from "express";
 import multer from "multer";
 import sharp from "sharp";
+import heicConvert from "heic-convert";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -51,11 +52,19 @@ ui.post("/api/upload", upload.single("photo"), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "No photo received." });
     const base = slug(req.body.name || path.parse(req.file.originalname).name || "photo");
     const key = `${base}-${Date.now().toString(36)}.jpg`;
-    const jpeg = await sharp(req.file.buffer)
+    let input = req.file.buffer;
+    // iPhone HEIC photos: convert to JPEG first (sharp can't read HEIC on its own).
+    if (/heic|heif/i.test(req.file.mimetype) || /\.hei[cf]$/i.test(req.file.originalname)) {
+      input = Buffer.from(await heicConvert({ buffer: input, format: "JPEG", quality: 0.92 }));
+    }
+    // Every product photo becomes the same 3:4 portrait (900x1200), cropped to the middle,
+    // so the shop grid lines up no matter how the picture was taken.
+    const jpeg = await sharp(input)
       .rotate() // honour phone orientation
-      .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
+      .resize({ width: 900, height: 1200, fit: "cover", position: "centre" })
       .jpeg({ quality: 85, mozjpeg: true })
       .toBuffer();
+    console.log(`upload ${req.file.originalname} ${req.file.mimetype} ${req.file.size}B → ${key} ${jpeg.length}B`);
     const r = await fetch(`${WORKER_URL}/api/admin/photos/${key}`, {
       method: "PUT",
       headers: { authorization: `Bearer ${TOKEN}`, "content-type": "image/jpeg" },
@@ -64,7 +73,8 @@ ui.post("/api/upload", upload.single("photo"), async (req, res) => {
     const data = await r.json();
     res.status(r.status).json(data);
   } catch (err) {
-    res.status(500).json({ error: String(err.message || err) });
+    console.log("upload failed:", String(err.message || err));
+    res.status(500).json({ error: "Could not use that photo: " + String(err.message || err) });
   }
 });
 

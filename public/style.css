@@ -581,3 +581,4 @@ footer{padding:26px;text-align:center;background:linear-gradient(90deg,#ffe8f0,#
 .no-photo{display:grid;place-items:center;height:100%;min-height:180px;font-size:48px;background:#fff7fb}
 .product-desc{font-size:13px;color:#8b6f87;margin:4px 0 6px;line-height:1.4}
 .grid-note{grid-column:1/-1;text-align:center;padding:40px;color:#8b6f87}
+.product-badge.low{background:#fff3d6;color:#c9862b;z-index:2}
