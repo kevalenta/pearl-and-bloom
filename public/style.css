@@ -491,7 +491,7 @@ footer{padding:26px;text-align:center;background:linear-gradient(90deg,#ffe8f0,#
 .charm-btn span{font-size:12px;font-weight:700;margin-left:4px}
 .charm-btn.selected{background:#eaf8ff;box-shadow:0 0 0 2px #b9dff5;border-color:#b9dff5}
 
-.real-photo{padding:0!important;overflow:hidden;background:#fff!important}.real-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.real-photo{padding:0!important;overflow:hidden;background:#fff!important}.real-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block} /* white-background photos: show the whole item, never crop it */
 .product-grid{grid-template-columns:repeat(4,1fr)!important}@media(max-width:900px){.product-grid{grid-template-columns:repeat(2,1fr)!important}}@media(max-width:560px){.product-grid{grid-template-columns:1fr!important}}
 
 .order-confirm-overlay{display:none;position:fixed;inset:0;background:rgba(95,68,82,.28);z-index:100;place-items:center;padding:20px}
@@ -563,7 +563,6 @@ footer{padding:26px;text-align:center;background:linear-gradient(90deg,#ffe8f0,#
 }
 /* This one photo is wide instead of tall, so nudge the crop left to
    keep the whole bracelet in the frame. */
-.real-photo img[src*="blue-skies-smiley"]{object-position:40% center}
 
 /* Shipping options in the checkout box */
 .shipping-choices{border:1.5px solid #f0d6e1;border-radius:16px;padding:12px 14px 14px;margin:16px 0 0}
