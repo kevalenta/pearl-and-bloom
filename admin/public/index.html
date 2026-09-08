@@ -168,9 +168,14 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// Tailscale Serve mounts this app at /admin (and strips the prefix before proxying), so the
+// browser must always talk to /admin/api/... — never a relative "api/..." that could land on
+// the preview site when the URL has no trailing slash.
+const ROOT=location.pathname.startsWith('/admin')?'/admin/':'/';
+if(location.pathname==='/admin') history.replaceState(null,'','/admin/'+location.search);
 const $=s=>document.querySelector(s);
 const api=async(path,opts={})=>{
-  const r=await fetch('api/'+path,{headers:{'content-type':'application/json'},...opts});
+  const r=await fetch(ROOT+'api/'+path,{headers:{'content-type':'application/json'},...opts});
   const data=await r.json().catch(()=>({}));
   if(!r.ok) throw new Error(data.error||('Request failed ('+r.status+')'));
   return data;
@@ -301,7 +306,7 @@ async function uploadPhoto(file){
   $('#dropInner').innerHTML='<div>Uploading… ⏳</div>'; $('#editError').textContent='';
   const fd=new FormData(); fd.append('photo',file); fd.append('name',$('#f_name').value||file.name);
   try{
-    const r=await fetch('api/upload',{method:'POST',body:fd}); const data=await r.json();
+    const r=await fetch(ROOT+'api/upload',{method:'POST',body:fd}); const data=await r.json();
     if(!r.ok) throw new Error(data.error||'Upload failed');
     setPhotoPreview(data.photo); toast('Photo uploaded');
   }catch(err){$('#editError').textContent=err.message;setPhotoPreview($('#f_photo').value);}
