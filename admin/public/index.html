@@ -120,12 +120,21 @@
     <form id="editForm" class="form" novalidate>
       <input type="hidden" id="f_id">
       <input type="hidden" id="f_photo">
+      <input type="hidden" id="f_photo2">
       <div class="full">
         <label>Photo</label>
         <div class="drop" id="drop">
           <div id="dropInner"><div style="font-size:36px">📷</div><div><strong>Drag a photo here</strong> or tap to choose one</div><div class="hint">Phone photos are fine — it gets resized automatically.</div></div>
           <input type="file" id="fileInput" accept="image/*" hidden>
         </div>
+      </div>
+      <div class="full">
+        <label>Second photo <span style="font-weight:400;color:var(--muted)">(optional — shows as a small thumbnail in the corner)</span></label>
+        <div class="drop" id="drop2" style="min-height:120px">
+          <div id="dropInner2"><div style="font-size:28px">📷</div><div><strong>Drag a second photo here</strong> or tap to choose one</div></div>
+          <input type="file" id="fileInput2" accept="image/*" hidden>
+        </div>
+        <button type="button" class="btn ghost" id="clearPhoto2" style="margin-top:8px" hidden>Remove second photo</button>
       </div>
       <div><label>Name</label><input type="text" id="f_name" required placeholder="Sugar Plum Necklace"></div>
       <div><label>Price ($)</label><input type="number" id="f_price" min="0" step="0.25" required placeholder="3.00"></div>
@@ -262,13 +271,19 @@ function setPhotoPreview(path){
   $('#dropInner').innerHTML=path?`<img src="${esc(photoUrl(path))}" alt=""><div class="hint">Drop a new photo to replace it</div>`
     :'<div style="font-size:36px">📷</div><div><strong>Drag a photo here</strong> or tap to choose one</div><div class="hint">Phone photos are fine — it gets resized automatically.</div>';
 }
+function setPhoto2Preview(path){
+  $('#f_photo2').value=path||'';
+  $('#dropInner2').innerHTML=path?`<img src="${esc(photoUrl(path))}" alt="" style="max-height:120px"><div class="hint">Drop a new photo to replace it</div>`
+    :'<div style="font-size:28px">📷</div><div><strong>Drag a second photo here</strong> or tap to choose one</div>';
+  $('#clearPhoto2').hidden=!path;
+}
 function openEdit(p){
   $('#editTitle').textContent=p?'Edit product':'Add a product';
   $('#f_id').value=p?p.id:''; $('#f_name').value=p?p.name:''; $('#f_price').value=p?p.price:'';
   $('#f_category').value=p?p.category:'bracelets'; $('#f_keywords').value=p?p.keywords:''; $('#f_description').value=p?p.description:'';
   $('#f_stock').value=(p&&p.stock!==null&&p.stock!==undefined)?p.stock:'';
   $('#f_sold_out').checked=!!(p&&p.sold_out); $('#f_active').checked=p?!!p.active:true;
-  $('#deleteProduct').hidden=!p; $('#editError').textContent=''; setPhotoPreview(p?p.photo:'');
+  $('#deleteProduct').hidden=!p; $('#editError').textContent=''; setPhotoPreview(p?p.photo:''); setPhoto2Preview(p?p.photo2:'');
   ov.classList.add('open'); $('#f_name').focus();
 }
 $('#addProduct').addEventListener('click',()=>openEdit(null));
@@ -277,7 +292,7 @@ ov.addEventListener('click',e=>{if(e.target===ov) ov.classList.remove('open');})
 $('#editForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const body={name:$('#f_name').value.trim(),price:Number($('#f_price').value),category:$('#f_category').value,
-    keywords:$('#f_keywords').value.trim(),description:$('#f_description').value.trim(),photo:$('#f_photo').value,
+    keywords:$('#f_keywords').value.trim(),description:$('#f_description').value.trim(),photo:$('#f_photo').value,photo2:$('#f_photo2').value,
     sold_out:$('#f_sold_out').checked,active:$('#f_active').checked,
     stock:$('#f_stock').value.trim()===''?null:Number($('#f_stock').value)};
   if(!body.name){$('#editError').textContent='Give it a name.';return;}
@@ -294,22 +309,28 @@ $('#deleteProduct').addEventListener('click',async()=>{
   catch(err){$('#editError').textContent=err.message;}
 });
 
-// photo drop zone
-const drop=$('#drop'),fileInput=$('#fileInput');
-drop.addEventListener('click',()=>fileInput.click());
-fileInput.addEventListener('change',()=>{if(fileInput.files[0]) uploadPhoto(fileInput.files[0]);fileInput.value='';});
-['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
-['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
-drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0]; if(f) uploadPhoto(f);});
-async function uploadPhoto(file){
+// photo drop zones (main photo + optional second photo)
+function wireDrop(dropId,inputId,onFile){
+  const drop=$(dropId),fileInput=$(inputId);
+  drop.addEventListener('click',()=>fileInput.click());
+  fileInput.addEventListener('change',()=>{if(fileInput.files[0]) onFile(fileInput.files[0]);fileInput.value='';});
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+  drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0]; if(f) onFile(f);});
+}
+wireDrop('#drop','#fileInput',f=>uploadPhoto(f,1));
+wireDrop('#drop2','#fileInput2',f=>uploadPhoto(f,2));
+$('#clearPhoto2').addEventListener('click',()=>setPhoto2Preview(''));
+async function uploadPhoto(file,which=1){
+  const inner=which===2?'#dropInner2':'#dropInner', setPreview=which===2?setPhoto2Preview:setPhotoPreview, field=which===2?'#f_photo2':'#f_photo';
   if(!file.type.startsWith('image/')){$('#editError').textContent='That is not a photo.';return;}
-  $('#dropInner').innerHTML='<div>Uploading… ⏳</div>'; $('#editError').textContent='';
+  $(inner).innerHTML='<div>Uploading… ⏳</div>'; $('#editError').textContent='';
   const fd=new FormData(); fd.append('photo',file); fd.append('name',$('#f_name').value||file.name);
   try{
     const r=await fetch(ROOT+'api/upload',{method:'POST',body:fd}); const data=await r.json();
     if(!r.ok) throw new Error(data.error||'Upload failed');
-    setPhotoPreview(data.photo); toast('Photo uploaded');
-  }catch(err){$('#editError').textContent=err.message;setPhotoPreview($('#f_photo').value);}
+    setPreview(data.photo); toast('Photo uploaded');
+  }catch(err){$('#editError').textContent=err.message;setPreview($(field).value);}
 }
 
 // ----- orders

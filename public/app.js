@@ -36,7 +36,11 @@ window.removeItem=i=>{cart.splice(i,1);renderCart();};
 // ---- Products: loaded from the shop database (managed on the admin page) ----
 function escapeHtml(t){return String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function productCard(p){
-  const photo=p.photo?`<img src="${escapeHtml(p.photo)}" alt="${escapeHtml(p.name)}" loading="lazy">`:'<div class="no-photo">🌸</div>';
+  const photo=p.photo?`<img class="main" src="${escapeHtml(p.photo)}" alt="${escapeHtml(p.name)}" loading="lazy">`:'<div class="no-photo">🌸</div>';
+  // optional second photo: a small thumbnail in the bottom-left corner
+  const photo2=p.photo2?`<img class="photo-alt" src="${escapeHtml(p.photo2)}" alt="" loading="lazy">`:'';
+  const photos=[p.photo,p.photo2].filter(Boolean);
+  const zoom=photos.length?` data-photos="${escapeHtml(JSON.stringify(photos))}" title="Tap to see it bigger"`:'';
   const low=!p.sold_out && p.stock!==null && p.stock!==undefined && p.stock<=3;
   const soldOut=p.sold_out?'<span class="product-badge sold-out">Sold out</span>':(low?`<span class="product-badge low">Only ${p.stock} left</span>`:'');
   const btn=p.sold_out
@@ -44,7 +48,7 @@ function productCard(p){
     :`<button class="add-btn" data-product="${escapeHtml(p.name)}" data-price="${Number(p.price).toFixed(2)}" data-stock="${p.stock??''}">🛒 Add to Cart</button>`;
   const desc=p.description?`<p class="product-desc">${escapeHtml(p.description)}</p>`:'';
   return `<article class="product-card" data-category="${escapeHtml(p.category)}" data-name="${escapeHtml((p.name+' '+(p.keywords||'')).toLowerCase())}">
-    <div class="product-photo real-photo">${soldOut}<button class="fav-btn" aria-label="Favorite">♡</button>${photo}</div>
+    <div class="product-photo real-photo"${zoom}>${soldOut}<button class="fav-btn" aria-label="Favorite">♡</button>${photo}${photo2}</div>
     <div class="product-body"><h3>${escapeHtml(p.name)}</h3>${desc}<p class="product-price">$${Number(p.price).toFixed(2)}</p>${btn}</div>
   </article>`;
 }
@@ -64,11 +68,53 @@ function wireProductButtons(){
     });
   });
   document.querySelectorAll('.fav-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
       btn.classList.toggle('saved');
       btn.textContent=btn.classList.contains('saved')?'♥':'♡';
     });
   });
+  document.querySelectorAll('.real-photo[data-photos]').forEach(box=>{
+    box.addEventListener('click',()=>openPhotoView(JSON.parse(box.dataset.photos),box.querySelector('img.main')?.alt||''));
+  });
+}
+
+// ----- big photo view: click a product photo, hover (or drag on a phone) to zoom in
+let photoView=null;
+function openPhotoView(photos,name){
+  if(!photoView){
+    photoView=document.createElement('div');
+    photoView.className='photo-view';
+    photoView.innerHTML=`<div class="photo-view-box">
+      <button class="photo-view-close" aria-label="Close">✕</button>
+      <div class="photo-view-stage"><img alt=""></div>
+      <div class="photo-view-thumbs"></div>
+      <p class="photo-view-hint">Move your mouse over the photo to zoom in · drag on a phone</p>
+    </div>`;
+    document.body.appendChild(photoView);
+    const stage=photoView.querySelector('.photo-view-stage'),img=stage.querySelector('img');
+    const close=()=>{photoView.classList.remove('open');document.body.style.overflow='';};
+    photoView.querySelector('.photo-view-close').addEventListener('click',close);
+    photoView.addEventListener('click',e=>{if(e.target===photoView) close();});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape') close();});
+    // zoom follows the pointer: the point under the cursor stays under the cursor
+    const zoomAt=(x,y)=>{
+      const r=stage.getBoundingClientRect();
+      const px=Math.max(0,Math.min(100,(x-r.left)/r.width*100)),py=Math.max(0,Math.min(100,(y-r.top)/r.height*100));
+      img.style.transformOrigin=`${px}% ${py}%`; img.style.transform='scale(2.5)';
+    };
+    stage.addEventListener('mousemove',e=>zoomAt(e.clientX,e.clientY));
+    stage.addEventListener('mouseleave',()=>{img.style.transform='';});
+    stage.addEventListener('touchstart',e=>{zoomAt(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+    stage.addEventListener('touchmove',e=>{e.preventDefault();zoomAt(e.touches[0].clientX,e.touches[0].clientY);},{passive:false});
+    stage.addEventListener('touchend',()=>{img.style.transform='';});
+  }
+  const img=photoView.querySelector('.photo-view-stage img'),thumbs=photoView.querySelector('.photo-view-thumbs');
+  const show=i=>{img.src=photos[i];img.alt=name;img.style.transform='';thumbs.querySelectorAll('img').forEach((t,j)=>t.classList.toggle('on',i===j));};
+  thumbs.innerHTML=photos.length>1?photos.map(p=>`<img src="${escapeHtml(p)}" alt="">`).join(''):'';
+  thumbs.querySelectorAll('img').forEach((t,i)=>t.addEventListener('click',()=>show(i)));
+  show(0);
+  photoView.classList.add('open'); document.body.style.overflow='hidden';
 }
 async function loadProducts(){
   const grid=document.getElementById('productGrid');

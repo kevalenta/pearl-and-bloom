@@ -30,7 +30,7 @@ const STATUSES = ["new", "paid", "shipped", "done"];
 
 export async function listProducts(env) {
   const { results } = await env.DB.prepare(
-    "SELECT id, name, category, price, keywords, description, photo, sold_out, stock FROM products WHERE active = 1 ORDER BY sort, id"
+    "SELECT id, name, category, price, keywords, description, photo, photo2, sold_out, stock FROM products WHERE active = 1 ORDER BY sort, id"
   ).all();
   return json(results, 200, { "cache-control": "no-store" });
 }
@@ -119,6 +119,7 @@ async function migrate(env) {
   await run("products.stock", "ALTER TABLE products ADD COLUMN stock INTEGER"); // NULL = made to order
   await run("orders.shipped_at", "ALTER TABLE orders ADD COLUMN shipped_at TEXT");
   await run("orders.tracking", "ALTER TABLE orders ADD COLUMN tracking TEXT");
+  await run("products.photo2", "ALTER TABLE products ADD COLUMN photo2 TEXT NOT NULL DEFAULT ''"); // optional second photo (small thumbnail)
 
   const count = (await env.DB.prepare("SELECT COUNT(*) AS n FROM products").first()).n;
   if (count === 0 && Array.isArray(SEED)) {
@@ -145,6 +146,7 @@ function cleanProduct(body, partial = false) {
   if (!partial || body.keywords !== undefined) out.keywords = s(body.keywords, 300).toLowerCase();
   if (!partial || body.description !== undefined) out.description = s(body.description, 1000);
   if (!partial || body.photo !== undefined) out.photo = s(body.photo, 300);
+  if (!partial || body.photo2 !== undefined) out.photo2 = s(body.photo2, 300);
   if (!partial || body.active !== undefined) out.active = body.active === false || body.active === 0 ? 0 : 1;
   if (!partial || body.sold_out !== undefined) out.sold_out = body.sold_out === true || body.sold_out === 1 ? 1 : 0;
   if (!partial || body.sort !== undefined) out.sort = Number(body.sort) || 0;
@@ -165,8 +167,8 @@ async function createProduct(body, env) {
     p.sort = (last?.m || 0) + 10;
   }
   const r = await env.DB.prepare(
-    "INSERT INTO products (name, category, price, keywords, description, photo, active, sold_out, sort, stock) VALUES (?,?,?,?,?,?,?,?,?,?)"
-  ).bind(p.name, p.category, p.price, p.keywords, p.description, p.photo, p.active, p.sold_out, p.sort, p.stock).run();
+    "INSERT INTO products (name, category, price, keywords, description, photo, photo2, active, sold_out, sort, stock) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+  ).bind(p.name, p.category, p.price, p.keywords, p.description, p.photo, p.photo2, p.active, p.sold_out, p.sort, p.stock).run();
   const row = await env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(r.meta.last_row_id).first();
   return json(row, 201);
 }
@@ -183,11 +185,13 @@ async function updateProduct(id, body, env) {
 }
 
 async function deleteProduct(id, env) {
-  const row = await env.DB.prepare("SELECT photo FROM products WHERE id = ?").bind(id).first();
+  const row = await env.DB.prepare("SELECT photo, photo2 FROM products WHERE id = ?").bind(id).first();
   if (!row) return json({ error: "No such product" }, 404);
   await env.DB.prepare("DELETE FROM products WHERE id = ?").bind(id).run();
   // Uploaded photos live in R2; photos in the repo (img/…) are left alone.
-  if (row.photo.startsWith("photos/") && env.PHOTOS) await env.PHOTOS.delete(row.photo.slice("photos/".length));
+  for (const ph of [row.photo, row.photo2]) {
+    if (ph && ph.startsWith("photos/") && env.PHOTOS) await env.PHOTOS.delete(ph.slice("photos/".length));
+  }
   return json({ ok: true });
 }
 
